@@ -453,6 +453,7 @@ const App = {
     const statusEl = document.getElementById('apiKeyStatus');
     const inputEl = document.getElementById('apiKeyInput');
     const clearBtn = document.getElementById('clearApiKey');
+    const indicator = document.getElementById('apiKeyIndicator');
 
     if (statusEl) {
       statusEl.textContent = hasKey ? 'API key configured' : 'No API key set';
@@ -465,6 +466,11 @@ const App = {
 
     if (clearBtn) {
       clearBtn.classList.toggle('hidden', !hasKey);
+    }
+
+    // Update header indicator dot
+    if (indicator) {
+      indicator.classList.toggle('configured', hasKey);
     }
   },
 

@@ -38,15 +38,16 @@
       </div>
 
       <nav class="header-nav">
+        <button id="settingsToggle" class="btn btn-ghost btn-api-key" aria-label="Configure API Key">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+          </svg>
+          <span>API Key</span>
+          <span id="apiKeyIndicator" class="api-key-indicator"></span>
+        </button>
         <button id="themeToggle" class="icon-btn" aria-label="Toggle theme">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
-        <button id="settingsToggle" class="icon-btn" aria-label="Settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
       </nav>
@@ -91,188 +92,121 @@
   <main class="main">
     <!-- Landing View -->
     <div id="landingView" class="view landing-view">
-      <section class="hero">
-        <h1 class="hero-title">Score Your Docs for AI</h1>
-        <p class="hero-subtitle">
-          Identify issues that affect how AI assistants understand and use your documentation.
-          Get actionable fixes to make your help content AI-friendly.
-        </p>
-      </section>
+      <div class="landing-grid">
+        <!-- Left Column: Hero + Bookmarklet -->
+        <div class="landing-left">
+          <h1 class="hero-title">Score Zoho Docs<br>for AI Readiness</h1>
+          <p class="hero-subtitle">
+            Analyze help.zoho.com pages for AI-friendliness. Get a score and actionable fixes to improve how Zia and other AI assistants understand your documentation.
+          </p>
 
-      <section class="how-it-works">
-        <h2 class="section-title">How It Works</h2>
-        <div class="steps">
-          <div class="step">
-            <div class="step-number">1</div>
-            <div class="step-content">
-              <h3>Install Bookmarklet</h3>
-              <p>Drag the button below to your bookmarks bar</p>
-            </div>
-          </div>
-          <div class="step-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </div>
-          <div class="step">
-            <div class="step-number">2</div>
-            <div class="step-content">
-              <h3>Visit Help Page</h3>
-              <p>Go to any help.zoho.com documentation page</p>
-            </div>
-          </div>
-          <div class="step-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </div>
-          <div class="step">
-            <div class="step-number">3</div>
-            <div class="step-content">
-              <h3>Click to Score</h3>
-              <p>Click the bookmarklet and get instant analysis</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="bookmarklet-section">
-        <h2 class="section-title">Get the Bookmarklet</h2>
-        <div class="bookmarklet-box">
-          <div class="bookmarklet-drag">
-            <p class="drag-instruction">Drag this button to your bookmarks bar:</p>
+          <div class="bookmarklet-box">
+            <p class="drag-instruction">Drag to your bookmarks bar:</p>
             <a id="bookmarkletLink" href="#" class="bookmarklet-btn" onclick="return false;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <path d="M14 2v6h6"/>
                 <path d="M9 15l2 2 4-4"/>
               </svg>
-              Score Docs
+              Score This Page
             </a>
-            <button id="copyBookmarklet" class="btn btn-small">Copy Code</button>
+            <button id="copyBookmarklet" class="btn btn-small">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy Code
+            </button>
           </div>
-          <details class="bookmarklet-help">
-            <summary>What's a bookmarklet?</summary>
-            <p>
-              A bookmarklet is a small piece of JavaScript saved as a bookmark.
-              When clicked, it runs on the current page to extract content and send it here for scoring.
-              Your data stays in your browser - nothing is sent to any server except the Claude API for semantic analysis.
-            </p>
-          </details>
         </div>
-      </section>
 
-      <section class="api-setup-section">
-        <h2 class="section-title">Optional: Enable Full Analysis</h2>
-        <div class="api-setup-box">
-          <div class="api-info">
-            <div class="api-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-            </div>
-            <div class="api-text">
-              <h3>Claude API Key</h3>
-              <p>Add your API key to enable semantic analysis (outcome clarity, reversibility warnings, etc.). Without a key, only rule-based scoring is available.</p>
-            </div>
-          </div>
-          <button id="settingsToggleMain" class="btn btn-secondary" onclick="document.getElementById('settingsPanel').classList.toggle('hidden')">
-            Configure API Key
-          </button>
-        </div>
-      </section>
+        <!-- Right Column: How It Works -->
+        <div class="landing-right">
+          <h2 class="how-it-works-title">How It Works</h2>
 
-      <section class="preview-section">
-        <h2 class="section-title">What You'll Get</h2>
-        <div class="preview-grid">
-          <div class="preview-card">
-            <div class="preview-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
+          <div class="numbered-list">
+            <div class="numbered-item">
+              <div class="numbered-item-left">
+                <div class="numbered-item-number">1.</div>
+                <div class="numbered-item-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="numbered-item-content">
+                <h3>Install Bookmarklet</h3>
+                <p>Drag the button to your bookmarks bar. One-time setup.</p>
+              </div>
             </div>
-            <h3>Instant Scoring</h3>
-            <p>Get a composite score (0-10) with traffic light status for quick assessment</p>
-          </div>
-          <div class="preview-card">
-            <div class="preview-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
+            <div class="numbered-item">
+              <div class="numbered-item-left">
+                <div class="numbered-item-number">2.</div>
+                <div class="numbered-item-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="numbered-item-content">
+                <h3>Visit Help Page</h3>
+                <p>Navigate to any help.zoho.com documentation page.</p>
+              </div>
             </div>
-            <h3>Actionable Fixes</h3>
-            <p>Specific suggestions for each issue found, prioritized by impact</p>
-          </div>
-          <div class="preview-card">
-            <div class="preview-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="20" x2="18" y2="10"/>
-                <line x1="12" y1="20" x2="12" y2="4"/>
-                <line x1="6" y1="20" x2="6" y2="14"/>
-              </svg>
+            <div class="numbered-item">
+              <div class="numbered-item-left">
+                <div class="numbered-item-number">3.</div>
+                <div class="numbered-item-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="numbered-item-content">
+                <h3>Click to Score</h3>
+                <p>Get instant analysis with actionable fixes.</p>
+              </div>
             </div>
-            <h3>Category Breakdown</h3>
-            <p>Scores across 6 categories: structure, outcomes, terminology, visuals, context, permissions</p>
           </div>
-          <div class="preview-card">
-            <div class="preview-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-            </div>
-            <h3>Export Reports</h3>
-            <p>Download detailed Markdown reports to share with your team</p>
-          </div>
-        </div>
-      </section>
 
-      <section class="faq-section">
-        <h2 class="section-title">FAQ</h2>
-        <div class="faq-list">
-          <details class="faq-item">
-            <summary>What criteria does this tool use?</summary>
-            <p>
-              The scoring criteria come from the Zoho Zia Search team's research on AI-friendly documentation.
-              Key factors include: content structure (lists vs paragraphs, heading hierarchy),
-              outcome clarity (what changes after an action), terminology consistency,
-              text-based instructions over images, and self-contained context.
-            </p>
-          </details>
-          <details class="faq-item">
-            <summary>Is my data safe?</summary>
-            <p>
-              Yes. Page content is extracted locally in your browser. If you use the Claude API for semantic analysis,
-              that content is sent to Anthropic's API with your key. No data is stored on any server.
-              Your API key is stored in your browser's localStorage (with basic obfuscation).
-            </p>
-          </details>
-          <details class="faq-item">
-            <summary>Do I need an API key?</summary>
-            <p>
-              No, but it's recommended. Without an API key, you get rule-based scoring only (paragraph length,
-              heading structure, image ratios, etc.). With an API key, you also get semantic analysis for
-              outcome clarity, reversibility warnings, and contextual issues.
-            </p>
-          </details>
-          <details class="faq-item">
-            <summary>What pages can I score?</summary>
-            <p>
-              Currently, the tool is optimized for help.zoho.com pages. The bookmarklet extracts content
-              from Zoho help portal pages. Support for other documentation sites may be added in the future.
-            </p>
-          </details>
-          <details class="faq-item">
-            <summary>How much does it cost?</summary>
-            <p>
-              The tool itself is free. If you use Claude semantic analysis, you'll pay for API usage
-              with your own key (typically a few cents per page scored). Rule-based scoring is completely free.
-            </p>
-          </details>
+          <div class="bookmarklet-explainer">
+            <strong>What's a bookmarklet?</strong>
+            A bookmarklet is JavaScript saved as a bookmark. Click it on any help.zoho.com page to extract and score the content. Your data stays in your browser.
+          </div>
+
+          <div class="api-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <p>Add your <button class="link-btn" onclick="document.getElementById('settingsPanel').classList.toggle('hidden')">Claude API Key</button> for deeper semantic analysis.</p>
+          </div>
         </div>
-      </section>
+      </div>
+
+      <!-- Why Box (full width) -->
+      <div class="why-box">
+        <h3>Why AI-Friendly Docs Matter</h3>
+        <p>
+          Zia and other AI assistants rely on documentation to answer user questions.
+          When docs have unclear structure, ambiguous terminology, or missing context,
+          AI responses suffer. This tool helps you identify and fix these issues
+          before they impact users.
+        </p>
+      </div>
+
+      <!-- Trust Signals Footer -->
+      <div class="trust-signals">
+        <span>100% client-side</span>
+        <span class="divider"></span>
+        <span>Privacy-first</span>
+        <span class="divider"></span>
+        <span>No signup required</span>
+      </div>
     </div>
 
     <!-- Scoring View (Loading) -->
@@ -390,11 +324,6 @@
       </div>
     </div>
   </main>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <p>Built for the Zoho Zia team. Criteria based on AI-Friendly Documentation research.</p>
-  </footer>
 
   <!-- Scripts -->
   <script src="js/storage.js"></script>
