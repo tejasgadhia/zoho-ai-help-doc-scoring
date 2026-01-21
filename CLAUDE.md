@@ -6,14 +6,35 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 **AI Help Doc Scoring Tool** - Browser-based web app that scores Zoho documentation for AI-friendliness using a bookmarklet + BYOK (Bring Your Own Key) architecture.
 
-**Current Status:** MVP Implementation Complete
+**Current Status:** v0.2.0 - Landing page redesign complete, deployed to GitHub Pages
+
+**Live URL:** https://tejasgadhia.github.io/zoho-ai-help-doc-scoring/
 
 **Tech Stack:**
 - Runtime: 100% client-side JavaScript (no build step)
 - UI: Vanilla JS with Chart.js for visualizations
-- Styling: Custom CSS with Tailwind-inspired design tokens
+- Styling: Custom CSS with design tokens (Zoho brand colors)
 - Fonts: Playfair Display (headlines) + DM Sans (body)
 - API: Claude API (BYOK) for semantic analysis
+
+## Design System
+
+**Colors (Zoho Brand):**
+- Primary: #E42527 (Zoho Red)
+- Accent: #226DB4 (Zoho Blue)
+- Success: #1CB75E
+- Warning: #FFA23A
+- Error: #FF0000
+- Backgrounds: #FAFAFA (light), #1a1a1a (dark)
+
+**Typography:**
+- Headlines: Playfair Display (serif)
+- Body: DM Sans (sans-serif)
+
+**Layout:**
+- Two-column landing page (hero left, instructions right)
+- Full-width context box below grid
+- Trust signals footer
 
 ## Architecture
 
@@ -29,7 +50,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Main entry point, all views |
+| `index.html` | Main entry point, all views (landing, scoring, results) |
 | `js/app.js` | Main orchestration, UI state, event handling |
 | `js/bookmarklet.js` | Content extraction source (minified in app.js) |
 | `js/parser.js` | Validates and normalizes extracted content |
@@ -88,9 +109,9 @@ Single API call per page analyzing:
 
 ### Deploying
 
-1. Push to GitHub
-2. Enable GitHub Pages (Settings > Pages > Deploy from branch > main)
-3. **Important**: Update `APP_URL` in `js/app.js` bookmarklet to your GitHub Pages URL
+1. Commit and push to GitHub
+2. GitHub Pages auto-deploys from main branch
+3. Live at: https://tejasgadhia.github.io/zoho-ai-help-doc-scoring/
 
 ### Code Conventions
 
@@ -98,6 +119,7 @@ Single API call per page analyzing:
 - Each scoring module returns: `{criterionId, score, issues[], details}`
 - Issues format: `{severity: 'critical'|'warning'|'info', message, fix, location?, excerpt?}`
 - Scores are 0-10, traffic light: green >=7, yellow >=4, red <4
+- CSS uses custom properties (design tokens) for theming
 
 ### Adding New Rules
 
@@ -111,6 +133,13 @@ Single API call per page analyzing:
 1. Add criterion to prompt in `js/claude-client.js` `scoreSemanticCriteria()`
 2. Update `scorer.js` `addClaudeScores()` to extract and categorize
 3. Update `config/scoring-criteria.json` if needed
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v0.1.0 | 2026-01-21 | Initial MVP release |
+| v0.2.0 | 2026-01-21 | Landing page redesign with Zoho branding |
 
 ## File Reference (Planning Docs)
 
