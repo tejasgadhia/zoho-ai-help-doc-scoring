@@ -1,0 +1,225 @@
+/**
+ * Content Structure Rule-Based Scoring
+ * Evaluates paragraph length, list usage, and heading hierarchy
+ */
+
+const ContentStructureRules = {
+  /**
+   * Score paragraph brevity (CS-01)
+   * Flag paragraphs over 150 words
+   * @param {Object} metrics - Computed metrics from parser
+   * @returns {Object} Score and issues
+   */
+  scoreParagraphBrevity(metrics) {
+    const { paragraphs } = metrics;
+    const issues = [];
+
+    // No paragraphs = perfect score (likely all lists/tables)
+    if (paragraphs.count === 0) {
+      return {
+        criterionId: 'CS-01',
+        score: 10,
+        issues: [],
+        details: 'No paragraphs found (content may be structured as lists/tables)'
+      };
+    }
+
+    // Calculate score based on percentage of paragraphs under threshold
+    const underThreshold = paragraphs.count - paragraphs.longCount;
+    const percentageGood = underThreshold / paragraphs.count;
+
+    // Map to 0-10 scale
+    // 100% under threshold = 10
+    // 80% under threshold = 8
+    // etc.
+    let score = Math.round(percentageGood * 10);
+
+    // Add issues for long paragraphs
+    paragraphs.longParagraphs.forEach(p => {
+      issues.push({
+        severity: p.wordCount > 200 ? 'critical' : 'warning',
+        message: `Paragraph ${p.index + 1} has ${p.wordCount} words (threshold: 150)`,
+        location: `Paragraph ${p.index + 1}`,
+        excerpt: p.text,
+        fix: 'Consider breaking this paragraph into bullet points or shorter sections'
+      });
+    });
+
+    return {
+      criterionId: 'CS-01',
+      score,
+      issues,
+      details: `${paragraphs.longCount} of ${paragraphs.count} paragraphs exceed 150 words. Average length: ${paragraphs.avgLength} words.`
+    };
+  },
+
+  /**
+   * Score list usage (CS-02)
+   * Check ratio of lists to paragraphs
+   * @param {Object} metrics - Computed metrics
+   * @returns {Object} Score and issues
+   */
+  scoreListUsage(metrics) {
+    const { lists, paragraphs } = metrics;
+    const issues = [];
+
+    // Ideal ratio is ~0.3 (30% lists relative to paragraphs)
+    const idealRatio = 0.3;
+    const actualRatio = lists.listToParagraphRatio;
+
+    // No content = neutral score
+    if (paragraphs.count === 0 && lists.count === 0) {
+      return {
+        criterionId: 'CS-02',
+        score: 5,
+        issues: [{ severity: 'info', message: 'No paragraphs or lists found' }],
+        details: 'Unable to assess list usage - no text content found'
+      };
+    }
+
+    // Calculate score
+    // Perfect score at ideal ratio, decreasing as we move away
+    let score;
+    if (actualRatio >= idealRatio) {
+      // At or above ideal - good, max 10
+      score = Math.min(10, 7 + (actualRatio - idealRatio) * 10);
+    } else {
+      // Below ideal - scale from 0-7 based on how close to ideal
+      score = Math.round((actualRatio / idealRatio) * 7);
+    }
+
+    // Round to nearest integer
+    score = Math.max(0, Math.min(10, Math.round(score)));
+
+    // Add issues
+    if (actualRatio < 0.1 && paragraphs.count > 3) {
+      issues.push({
+        severity: 'warning',
+        message: 'Low list usage in procedural content',
+        fix: 'Consider converting step-by-step instructions into numbered lists'
+      });
+    }
+
+    return {
+      criterionId: 'CS-02',
+      score,
+      issues,
+      details: `List-to-paragraph ratio: ${actualRatio} (ideal: ${idealRatio}). ${lists.count} lists with ${lists.totalItems} total items.`
+    };
+  },
+
+  /**
+   * Score heading hierarchy (CS-04)
+   * Validate proper H1->H2->H3 structure
+   * @param {Object} metrics - Computed metrics
+   * @returns {Object} Score and issues
+   */
+  scoreHeadingHierarchy(metrics) {
+    const { headings } = metrics;
+    const issues = [];
+
+    // No headings
+    if (headings.count === 0) {
+      return {
+        criterionId: 'CS-04',
+        score: 3,
+        issues: [{
+          severity: 'critical',
+          message: 'No headings found',
+          fix: 'Add descriptive headings to structure the content'
+        }],
+        details: 'Page has no heading structure'
+      };
+    }
+
+    let score = 10;
+
+    // Check for H1
+    if (!headings.hasH1) {
+      score -= 2;
+      issues.push({
+        severity: 'warning',
+        message: 'Page lacks an H1 heading',
+        fix: 'Add a clear H1 heading that describes the page purpose'
+      });
+    }
+
+    // Check hierarchy
+    if (!headings.hierarchyValid.valid) {
+      const skipCount = headings.hierarchyValid.issues.length;
+      score -= Math.min(5, skipCount * 2);
+
+      headings.hierarchyValid.issues.forEach(issue => {
+        issues.push({
+          severity: 'warning',
+          message: issue.message,
+          location: `Heading ${issue.index + 1}`,
+          fix: 'Maintain proper heading hierarchy without skipping levels'
+        });
+      });
+    }
+
+    // Check heading count relative to content
+    const headingsPerContentBlock = headings.count / Math.max(1, metrics.content.totalBlocks);
+    if (headingsPerContentBlock < 0.05 && metrics.content.totalBlocks > 10) {
+      score -= 1;
+      issues.push({
+        severity: 'info',
+        message: 'Content could benefit from more section headings',
+        fix: 'Add subheadings to break up long sections'
+      });
+    }
+
+    return {
+      criterionId: 'CS-04',
+      score: Math.max(0, score),
+      issues,
+      details: `${headings.count} headings found. Distribution: ${JSON.stringify(headings.distribution)}`
+    };
+  },
+
+  /**
+   * Run all content structure rules
+   * @param {Object} metrics - Computed metrics
+   * @returns {Object} Combined results
+   */
+  scoreAll(metrics) {
+    const results = {
+      categoryId: 'CAT-01',
+      categoryName: 'Content Structure',
+      criteria: {}
+    };
+
+    // Run each rule
+    results.criteria['CS-01'] = this.scoreParagraphBrevity(metrics);
+    results.criteria['CS-02'] = this.scoreListUsage(metrics);
+    results.criteria['CS-04'] = this.scoreHeadingHierarchy(metrics);
+
+    // Calculate category score (weighted average)
+    const weights = { 'CS-01': 0.35, 'CS-02': 0.30, 'CS-04': 0.35 };
+    let totalWeight = 0;
+    let weightedSum = 0;
+
+    Object.entries(results.criteria).forEach(([id, result]) => {
+      const weight = weights[id] || 0.33;
+      weightedSum += result.score * weight;
+      totalWeight += weight;
+    });
+
+    results.categoryScore = Math.round((weightedSum / totalWeight) * 10) / 10;
+
+    // Collect all issues
+    results.allIssues = Object.values(results.criteria)
+      .flatMap(c => c.issues)
+      .sort((a, b) => {
+        const severityOrder = { critical: 0, warning: 1, info: 2 };
+        return severityOrder[a.severity] - severityOrder[b.severity];
+      });
+
+    return results;
+  }
+};
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ContentStructureRules;
+}

@@ -1,0 +1,271 @@
+{
+  "metadata": {
+    "source": "Zoho Connect Internal Forum Post",
+    "title": "AI Friendly Help Documentation",
+    "author_team": "Zia Search Team",
+    "date_captured": "2026-01-21",
+    "products_with_assistants": [
+      "CRM",
+      "Bigin",
+      "Site24x7",
+      "ZohoPos",
+      "Zoho Analytics",
+      "Zoho Meeting",
+      "Zoho Webinar",
+      "Zoho Assist",
+      "Zoho Sign"
+    ]
+  },
+  "core_principle": "Good assistants start with good documentation. Reliable assistants depend just as much on clear and well-structured help content as on models, prompts, and tuning.",
+  "high_impact_factors": [
+    {
+      "id": "HIF-01",
+      "name": "One clear source of truth",
+      "description": "Avoid spreading the same instruction across multiple pages with variations.",
+      "scoring_signal": "duplicate_content"
+    },
+    {
+      "id": "HIF-02",
+      "name": "Clear document boundaries",
+      "description": "Each page should focus on one primary intent or action. Pages that try to handle multiple intents are harder for AI agents to reason over.",
+      "scoring_signal": "single_intent_per_page"
+    },
+    {
+      "id": "HIF-03",
+      "name": "Explicit outcomes",
+      "description": "Clearly state what changes, what remains, and what cannot be undone. Do not rely on implied behavior.",
+      "scoring_signal": "outcome_clarity"
+    },
+    {
+      "id": "HIF-04",
+      "name": "Consistent naming across the product",
+      "description": "Use the same terms everywhere for the same action or state.",
+      "scoring_signal": "terminology_consistency"
+    },
+    {
+      "id": "HIF-05",
+      "name": "Optimize for structure",
+      "description": "Clear headings, lists, and sections work better than long explanatory paragraphs.",
+      "scoring_signal": "structural_clarity"
+    }
+  ],
+  "criteria_categories": [
+    {
+      "category_id": "CAT-01",
+      "category_name": "Content Structure",
+      "criteria": [
+        {
+          "id": "CS-01",
+          "criterion": "Prefer bullet points over long paragraphs",
+          "scoring_approach": "Check paragraph length, presence of lists for procedural content"
+        },
+        {
+          "id": "CS-02",
+          "criterion": "Break procedures into short, atomic steps with one action per step",
+          "scoring_approach": "Analyze step complexity, count actions per instruction"
+        },
+        {
+          "id": "CS-03",
+          "criterion": "Avoid embedding multiple actions within a single instruction",
+          "scoring_approach": "Parse instructions for compound actions (and/then patterns)"
+        },
+        {
+          "id": "CS-04",
+          "criterion": "Use clear, descriptive headings that reflect user intent",
+          "scoring_approach": "Evaluate heading clarity and intent-alignment"
+        },
+        {
+          "id": "CS-05",
+          "criterion": "Keep workflows clearly separated",
+          "detail": "Install, usage, and uninstall instructions should be on separate pages",
+          "scoring_approach": "Check for workflow mixing on single pages"
+        },
+        {
+          "id": "CS-06",
+          "criterion": "Avoid duplicated or conflicting instructions",
+          "scoring_approach": "Cross-reference content across documentation set"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-02",
+      "category_name": "Consistent Action Vocabulary",
+      "criteria": [
+        {
+          "id": "AV-01",
+          "criterion": "Standardize action terms across all documentation",
+          "detail": "Naming is part of information architecture",
+          "scoring_approach": "Build term dictionary, flag inconsistencies"
+        },
+        {
+          "id": "AV-02",
+          "criterion": "Avoid interchangeable terms that imply different outcomes",
+          "examples": {
+            "bad_practice": "Using Deactivate/Disconnect/Delete interchangeably",
+            "good_practice": "Each term has distinct, documented meaning"
+          },
+          "scoring_approach": "Check for term conflation in similar contexts"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-03",
+      "category_name": "Outcomes and Reversibility",
+      "criteria": [
+        {
+          "id": "OR-01",
+          "criterion": "Describe what changes as a result of the action",
+          "scoring_approach": "Check for outcome statements after action descriptions"
+        },
+        {
+          "id": "OR-02",
+          "criterion": "Explicitly state what data or settings are affected",
+          "scoring_approach": "Look for affected-data callouts"
+        },
+        {
+          "id": "OR-03",
+          "criterion": "Clearly indicate whether the action is reversible",
+          "scoring_approach": "Check for reversibility statements"
+        },
+        {
+          "id": "OR-04",
+          "criterion": "Include disclaimer or note for major destructive actions",
+          "example": "WorkDrive Sync uninstall note: 'When you uninstall the Sync app from your computer, the files already synced to your computer will not be deleted automatically.'",
+          "scoring_approach": "Flag destructive actions without warnings"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-04",
+      "category_name": "Permission and Plan-Based Clarity",
+      "criteria": [
+        {
+          "id": "PP-01",
+          "criterion": "Clearly define the scope and eligibility for each action",
+          "scoring_approach": "Check for scope statements"
+        },
+        {
+          "id": "PP-02",
+          "criterion": "Explicitly mention supported plans and product editions",
+          "examples": [
+            "In Free plan, only 2000 requests are allowed per day per user",
+            "In Standard plan, API support is not available for this feature"
+          ],
+          "scoring_approach": "Check for plan-specific callouts"
+        },
+        {
+          "id": "PP-03",
+          "criterion": "Clearly state required roles and permissions",
+          "example": "Only Workspace admins can perform this action",
+          "scoring_approach": "Check for permission requirements"
+        },
+        {
+          "id": "PP-04",
+          "criterion": "Call out preconditions that must be met before the action is available",
+          "example": "Feature is available only for IN / EU region users",
+          "scoring_approach": "Check for precondition statements"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-05",
+      "category_name": "Pricing Page Structure",
+      "criteria": [
+        {
+          "id": "PR-01",
+          "criterion": "Clearly mention pricing details, features, and usage limits for all available plans",
+          "scoring_approach": "Check completeness of plan information"
+        },
+        {
+          "id": "PR-02",
+          "criterion": "Maintain region-wise standardization across all pricing pages",
+          "scoring_approach": "Compare regional pricing page structures"
+        },
+        {
+          "id": "PR-03",
+          "criterion": "Clearly label free vs paid capabilities and trial limitations",
+          "scoring_approach": "Check for free/paid/trial distinctions"
+        },
+        {
+          "id": "PR-04",
+          "criterion": "Use text-based labels in plan comparison tables instead of icons",
+          "detail": "Use 'Available', 'Supported', 'Not supported' instead of checkmarks or crosses. At minimum, include this information in tooltips or ARIA labels.",
+          "scoring_approach": "Check for icon-only cells without text alternatives"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-06",
+      "category_name": "Intent-Driven FAQs",
+      "criteria": [
+        {
+          "id": "FAQ-01",
+          "criterion": "Focus FAQs on user goals and outcomes, not feature names",
+          "examples": {
+            "feature_centric_bad": [
+              "How to disable integration",
+              "How to enable a connection"
+            ],
+            "intent_driven_good": [
+              "I want to stop syncing data",
+              "I need to sync contacts between two apps"
+            ]
+          },
+          "scoring_approach": "Analyze FAQ phrasing for user-goal orientation vs feature orientation"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-07",
+      "category_name": "Community Content Consolidation",
+      "criteria": [
+        {
+          "id": "CC-01",
+          "criterion": "Periodically review community posts and migrate valid information into official help documentation",
+          "detail": "Community pages contain user-generated content that can be outdated or inconsistent. Maintain a single, reliable source for the Assistant.",
+          "scoring_approach": "Check for information gaps between community content and official docs"
+        }
+      ]
+    },
+    {
+      "category_id": "CAT-08",
+      "category_name": "Text-Based Instructions Over Visual Content",
+      "criteria": [
+        {
+          "id": "TB-01",
+          "criterion": "Describe steps and workflows in clear text instead of relying on images, screenshots, or PPTs",
+          "scoring_approach": "Flag image-heavy pages without text alternatives"
+        },
+        {
+          "id": "TB-02",
+          "criterion": "Use visuals as supporting material, not as the primary source of instructions",
+          "scoring_approach": "Check text-to-image ratio for procedural content"
+        },
+        {
+          "id": "TB-03",
+          "criterion": "Ensure all critical steps, conditions, and outcomes are explicitly written out in words",
+          "scoring_approach": "Check for text coverage of key information"
+        }
+      ]
+    }
+  ],
+  "maintenance_recommendations": {
+    "description": "Help content and Assistants need to evolve together",
+    "actions": [
+      "Regularly review user searches",
+      "Analyze Assistant conversations and responses to understand behavior",
+      "Use repeated questions and Assistant failures to identify gaps",
+      "Add or update documents based on identified gaps"
+    ]
+  },
+  "community_suggestions": [
+    {
+      "from": "Guest#1",
+      "suggestion": "Include Zoho Learn for internal documentation retrieval"
+    },
+    {
+      "from": "Guest#2",
+      "suggestion": "Implement LLMs.txt with chatbot across Zoho pages for AI readiness"
+    }
+  ]
+}

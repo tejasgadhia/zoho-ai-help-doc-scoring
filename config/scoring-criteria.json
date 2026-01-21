@@ -1,0 +1,239 @@
+{
+  "version": "1.0.0",
+  "categories": {
+    "content-structure": {
+      "id": "CAT-01",
+      "name": "Content Structure",
+      "weight": 0.30,
+      "description": "How well the content is organized with clear headings, lists, and atomic steps",
+      "criteria": {
+        "CS-01": {
+          "name": "Paragraph brevity",
+          "description": "Prefer bullet points over long paragraphs",
+          "type": "rule",
+          "threshold": 150,
+          "unit": "words",
+          "weight": 0.20
+        },
+        "CS-02": {
+          "name": "List usage",
+          "description": "Use lists for procedural content",
+          "type": "rule",
+          "idealRatio": 0.3,
+          "weight": 0.15
+        },
+        "CS-03": {
+          "name": "Step atomicity",
+          "description": "Break procedures into short, atomic steps with one action per step",
+          "type": "claude",
+          "weight": 0.25
+        },
+        "CS-04": {
+          "name": "Heading hierarchy",
+          "description": "Use clear, descriptive headings that reflect user intent",
+          "type": "rule",
+          "weight": 0.20
+        },
+        "CS-05": {
+          "name": "Workflow separation",
+          "description": "Keep workflows clearly separated (install, usage, uninstall on different pages)",
+          "type": "claude",
+          "weight": 0.10
+        },
+        "CS-06": {
+          "name": "No duplication",
+          "description": "Avoid duplicated or conflicting instructions",
+          "type": "claude",
+          "weight": 0.10
+        }
+      }
+    },
+    "outcomes-reversibility": {
+      "id": "CAT-03",
+      "name": "Outcomes & Reversibility",
+      "weight": 0.25,
+      "description": "Whether actions clearly state their effects and reversibility",
+      "criteria": {
+        "OR-01": {
+          "name": "Outcome clarity",
+          "description": "Describe what changes as a result of the action",
+          "type": "claude",
+          "weight": 0.30
+        },
+        "OR-02": {
+          "name": "Affected data",
+          "description": "Explicitly state what data or settings are affected",
+          "type": "claude",
+          "weight": 0.25
+        },
+        "OR-03": {
+          "name": "Reversibility stated",
+          "description": "Clearly indicate whether the action is reversible",
+          "type": "claude",
+          "weight": 0.25
+        },
+        "OR-04": {
+          "name": "Destructive warnings",
+          "description": "Include disclaimer or note for major destructive actions",
+          "type": "claude",
+          "weight": 0.20
+        }
+      }
+    },
+    "terminology": {
+      "id": "CAT-02",
+      "name": "Consistent Terminology",
+      "weight": 0.15,
+      "description": "Whether the same terms are used consistently throughout",
+      "criteria": {
+        "AV-01": {
+          "name": "Term consistency",
+          "description": "Standardize action terms across all documentation",
+          "type": "rule",
+          "weight": 0.60
+        },
+        "AV-02": {
+          "name": "No term conflation",
+          "description": "Avoid interchangeable terms that imply different outcomes",
+          "type": "claude",
+          "weight": 0.40
+        }
+      }
+    },
+    "text-over-visuals": {
+      "id": "CAT-08",
+      "name": "Text Over Visuals",
+      "weight": 0.10,
+      "description": "Whether instructions are text-based rather than image-dependent",
+      "criteria": {
+        "TB-01": {
+          "name": "Text-first instructions",
+          "description": "Describe steps in clear text instead of relying on images",
+          "type": "rule",
+          "weight": 0.35
+        },
+        "TB-02": {
+          "name": "Image ratio",
+          "description": "Use visuals as supporting material, not primary source",
+          "type": "rule",
+          "idealRatio": 0.33,
+          "weight": 0.35
+        },
+        "TB-03": {
+          "name": "Alt text coverage",
+          "description": "All images have descriptive alt text",
+          "type": "rule",
+          "weight": 0.30
+        }
+      }
+    },
+    "self-contained": {
+      "id": "CAT-09",
+      "name": "Self-Contained Context",
+      "weight": 0.05,
+      "description": "Whether each section provides sufficient context without relying on external references",
+      "criteria": {
+        "GAP-03": {
+          "name": "No dangling references",
+          "description": "Sections should not start with pronouns without clear antecedents",
+          "type": "claude",
+          "weight": 0.50
+        },
+        "GAP-04": {
+          "name": "Self-sufficient sections",
+          "description": "Avoid 'as mentioned above' without restating key information",
+          "type": "claude",
+          "weight": 0.50
+        }
+      }
+    },
+    "permissions-plans": {
+      "id": "CAT-04",
+      "name": "Permissions & Plans",
+      "weight": 0.15,
+      "description": "Whether scope, permissions, and plan requirements are clearly stated",
+      "criteria": {
+        "PP-01": {
+          "name": "Scope defined",
+          "description": "Clearly define the scope and eligibility for each action",
+          "type": "claude",
+          "weight": 0.25
+        },
+        "PP-02": {
+          "name": "Plan requirements",
+          "description": "Explicitly mention supported plans and product editions",
+          "type": "claude",
+          "weight": 0.25
+        },
+        "PP-03": {
+          "name": "Permission requirements",
+          "description": "Clearly state required roles and permissions",
+          "type": "claude",
+          "weight": 0.25
+        },
+        "PP-04": {
+          "name": "Preconditions stated",
+          "description": "Call out preconditions that must be met before the action is available",
+          "type": "claude",
+          "weight": 0.25
+        }
+      }
+    }
+  },
+  "scoring": {
+    "scale": {
+      "min": 0,
+      "max": 10
+    },
+    "thresholds": {
+      "green": 7,
+      "yellow": 4,
+      "red": 0
+    },
+    "labels": {
+      "green": "Good",
+      "yellow": "Needs Work",
+      "red": "Critical"
+    }
+  },
+  "detection": {
+    "compoundActionPatterns": [
+      "and then",
+      "then click",
+      "and click",
+      "and select",
+      "and choose",
+      ", then",
+      "; then"
+    ],
+    "danglingReferencePatterns": [
+      "^This\\s",
+      "^It\\s",
+      "^These\\s",
+      "^They\\s",
+      "^That\\s",
+      "as mentioned above",
+      "as noted earlier",
+      "see previous",
+      "see above"
+    ],
+    "destructiveActions": [
+      "delete",
+      "remove",
+      "uninstall",
+      "erase",
+      "clear",
+      "reset",
+      "purge",
+      "destroy",
+      "permanently"
+    ],
+    "confusableTerms": {
+      "deactivate": ["disable", "turn off", "switch off"],
+      "delete": ["remove", "erase", "clear"],
+      "enable": ["activate", "turn on", "switch on"],
+      "create": ["add", "make", "new"],
+      "edit": ["modify", "change", "update"]
+    }
+  }
+}
