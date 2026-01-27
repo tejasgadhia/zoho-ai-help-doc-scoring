@@ -35,6 +35,11 @@ Without an API key, you still get rule-based scoring for paragraph length, headi
 
 All processing happens in your browser. Claude API analysis (if enabled) sends content to Anthropic only.
 
+
 ## License
 
-Internal use only.
+This project is licensed under the [O'Saasy License Agreement](https://osaasy.dev/).
+
+**TL;DR**: You can use, modify, and distribute this project freely. You can self-host it for personal or commercial use. However, you cannot offer it as a competing hosted/managed SaaS product.
+
+See [LICENSE.md](LICENSE.md) for full details.
