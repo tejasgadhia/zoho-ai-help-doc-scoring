@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -37,6 +37,34 @@ This file provides guidance to Claude Code when working with code in this reposi
 - Trust signals footer
 
 ## Architecture
+
+### Data Flow
+
+```
+┌─────────────────┐     postMessage      ┌─────────────────┐
+│   Bookmarklet   │─────────────────────▶│     App.js      │
+│ (help.zoho.com) │                      │  (orchestrator) │
+└─────────────────┘                      └────────┬────────┘
+                                                  │
+                                         ┌────────▼────────┐
+                                         │   Parser.js     │
+                                         │  (normalize)    │
+                                         └────────┬────────┘
+                                                  │
+                    ┌─────────────────────────────┼─────────────────────────────┐
+                    │                             │                             │
+           ┌────────▼────────┐           ┌───────▼────────┐           ┌────────▼────────┐
+           │  Rule Modules   │           │   Scorer.js    │           │ ClaudeClient.js │
+           │ (js/rules/*.js) │◀─────────▶│  (orchestrate) │◀─────────▶│  (API calls)    │
+           └─────────────────┘           └───────┬────────┘           └─────────────────┘
+                                                 │
+                              ┌──────────────────┼──────────────────┐
+                              │                  │                  │
+                     ┌────────▼────────┐ ┌──────▼───────┐ ┌────────▼────────┐
+                     │   Charts.js     │ │  Export.js   │ │   Storage.js    │
+                     │ (visualizations)│ │  (reports)   │ │  (localStorage) │
+                     └─────────────────┘ └──────────────┘ └─────────────────┘
+```
 
 ### How It Works
 
@@ -93,6 +121,17 @@ Single API call per page analyzing:
 
 ## Development
 
+### Quick Start
+
+```bash
+# Open in browser (no build step needed)
+open index.html
+
+# Or serve locally (for cross-origin bookmarklet testing)
+python3 -m http.server 8000
+# Then visit http://localhost:8000
+```
+
 ### Local Testing
 
 1. Open `index.html` in a browser
@@ -113,13 +152,42 @@ Single API call per page analyzing:
 2. GitHub Pages auto-deploys from main branch
 3. Live at: https://tejasgadhia.github.io/zoho-ai-help-doc-scoring/
 
+### Module Interfaces
+
+**Scoring modules** (`js/rules/*.js`) must implement:
+```javascript
+const ModuleRules = {
+  scoreAll(metrics, content) {
+    return {
+      categoryScore: number,    // 0-10
+      criteria: { [id]: { score, issues, details } },
+      allIssues: Issue[]
+    };
+  }
+};
+```
+
+**Issue format**:
+```javascript
+{ severity: 'critical'|'warning'|'info', message: string, fix?: string, location?: string, excerpt?: string }
+```
+
+**Global objects** (available without imports):
+- `App` - Main orchestrator, UI state
+- `Parser` - Content normalization
+- `Scorer` - Scoring orchestration
+- `ClaudeClient` - API integration
+- `Storage` - localStorage utilities
+- `Charts` - Chart.js wrappers
+- `Export` - Report generation
+- `ContentStructureRules`, `TerminologyRules`, `TextOverVisualsRules` - Rule modules
+
 ### Code Conventions
 
 - All modules are plain objects with methods (no classes)
-- Each scoring module returns: `{criterionId, score, issues[], details}`
-- Issues format: `{severity: 'critical'|'warning'|'info', message, fix, location?, excerpt?}`
 - Scores are 0-10, traffic light: green >=7, yellow >=4, red <4
 - CSS uses custom properties (design tokens) for theming
+- No build step - scripts loaded via `<script>` tags in dependency order
 
 ### Adding New Rules
 
@@ -133,6 +201,18 @@ Single API call per page analyzing:
 1. Add criterion to prompt in `js/claude-client.js` `scoreSemanticCriteria()`
 2. Update `scorer.js` `addClaudeScores()` to extract and categorize
 3. Update `config/scoring-criteria.json` if needed
+
+### Script Load Order
+
+Scripts must be loaded in this order in `index.html`:
+1. `js/storage.js` (no dependencies)
+2. `js/parser.js` (no dependencies)
+3. `js/rules/*.js` (no dependencies)
+4. `js/claude-client.js` (no dependencies)
+5. `js/scorer.js` (depends on rules, claude-client)
+6. `js/charts.js` (depends on Chart.js CDN)
+7. `js/export.js` (no dependencies)
+8. `js/app.js` (depends on all above)
 
 ## Version History
 
