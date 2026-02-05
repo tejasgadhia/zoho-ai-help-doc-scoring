@@ -100,12 +100,12 @@ const Scorer = {
       } catch (error) {
         console.error('Claude scoring failed:', error);
         // Fall back to estimated scores for Claude categories
-        this.addEstimatedScores(results);
+        this.addEstimatedScores(results, content, metrics);
         results.meta.claudeError = error.message;
       }
     } else {
       // No API key - add estimated scores
-      this.addEstimatedScores(results);
+      this.addEstimatedScores(results, content, metrics);
     }
 
     // Step 3: Calculate composite score
@@ -226,39 +226,127 @@ const Scorer = {
    * Add estimated scores for Claude categories when API not available
    * @param {Object} results - Results object to modify
    */
-  addEstimatedScores(results) {
-    // Add placeholder categories with neutral scores
+  addEstimatedScores(results, content, metrics) {
+    const text = (content.text.fullText || '').toLowerCase();
+    const issuesFor = () => [];
+    const hasAny = terms => terms.some(term => text.includes(term));
+
+    // Outcomes & Reversibility (estimated)
+    let outcomeScore = 6;
+    const outcomeIssues = issuesFor();
+    const destructiveTerms = ['delete', 'remove', 'erase', 'discard', 'wipe', 'purge'];
+    const warningTerms = ['cannot be undone', 'irreversible', 'permanent', 'warning', 'caution'];
+    const outcomeTerms = ['will', 'results in', 'creates', 'updates', 'changes', 'affects'];
+
+    if (hasAny(destructiveTerms) && !hasAny(warningTerms)) {
+      outcomeScore -= 2;
+      outcomeIssues.push({
+        severity: 'warning',
+        message: 'Destructive actions detected without reversibility warning',
+        fix: 'Add a warning if actions are irreversible or destructive'
+      });
+    }
+    if (hasAny(outcomeTerms)) {
+      outcomeScore += 1;
+    }
+    outcomeScore = Math.max(0, Math.min(10, outcomeScore));
+
     results.categories['outcomes-reversibility'] = {
       id: 'CAT-03',
       name: 'Outcomes & Reversibility',
-      score: null,
+      score: outcomeScore,
       weight: this.CATEGORY_WEIGHTS['outcomes-reversibility'],
-      criteria: {},
-      issues: [],
+      criteria: {
+        'EST-OR': {
+          score: outcomeScore,
+          issues: outcomeIssues,
+          details: 'Estimated from keyword heuristics (no Claude)'
+        }
+      },
+      issues: outcomeIssues,
       estimated: true,
-      message: 'Requires Claude API for semantic analysis'
+      message: 'Estimated using heuristic checks (no Claude)'
     };
 
-    results.categories['self-contained'] = {
-      id: 'CAT-09',
-      name: 'Self-Contained Context',
-      score: null,
-      weight: this.CATEGORY_WEIGHTS['self-contained'],
-      criteria: {},
-      issues: [],
-      estimated: true,
-      message: 'Requires Claude API for semantic analysis'
-    };
+    // Permissions & Plans (estimated)
+    let permissionsScore = 6;
+    const permissionsIssues = issuesFor();
+    const permissionTerms = ['admin', 'permission', 'role', 'access', 'privilege'];
+    const planTerms = ['plan', 'edition', 'subscription', 'upgrade'];
+
+    if (hasAny(permissionTerms)) permissionsScore += 1;
+    if (hasAny(planTerms)) permissionsScore += 1;
+    if (!hasAny(permissionTerms) && !hasAny(planTerms)) {
+      permissionsScore -= 1;
+      permissionsIssues.push({
+        severity: 'info',
+        message: 'No explicit permissions or plan requirements detected',
+        fix: 'Call out required roles, permissions, or plan editions if applicable'
+      });
+    }
+    permissionsScore = Math.max(0, Math.min(10, permissionsScore));
 
     results.categories['permissions-plans'] = {
       id: 'CAT-04',
       name: 'Permissions & Plans',
-      score: null,
+      score: permissionsScore,
       weight: this.CATEGORY_WEIGHTS['permissions-plans'],
-      criteria: {},
-      issues: [],
+      criteria: {
+        'EST-PP': {
+          score: permissionsScore,
+          issues: permissionsIssues,
+          details: 'Estimated from keyword heuristics (no Claude)'
+        }
+      },
+      issues: permissionsIssues,
       estimated: true,
-      message: 'Requires Claude API for semantic analysis'
+      message: 'Estimated using heuristic checks (no Claude)'
+    };
+
+    // Self-Contained Context (estimated)
+    let contextScore = 6;
+    const contextIssues = issuesFor();
+    if (metrics && metrics.links && metrics.links.external > metrics.links.internal) {
+      contextScore -= 1;
+      contextIssues.push({
+        severity: 'info',
+        message: 'Relies heavily on external links for context',
+        fix: 'Ensure critical context is included in the page'
+      });
+    }
+    if (metrics && metrics.content && metrics.content.wordCount < 200) {
+      contextScore -= 1;
+      contextIssues.push({
+        severity: 'info',
+        message: 'Low word count may indicate insufficient context',
+        fix: 'Add more context so the page can stand alone'
+      });
+    }
+    if (metrics && metrics.headings && metrics.headings.count === 0) {
+      contextScore -= 1;
+      contextIssues.push({
+        severity: 'warning',
+        message: 'No headings detected to anchor context',
+        fix: 'Add headings to clarify context and structure'
+      });
+    }
+    contextScore = Math.max(0, Math.min(10, contextScore));
+
+    results.categories['self-contained'] = {
+      id: 'CAT-09',
+      name: 'Self-Contained Context',
+      score: contextScore,
+      weight: this.CATEGORY_WEIGHTS['self-contained'],
+      criteria: {
+        'EST-SC': {
+          score: contextScore,
+          issues: contextIssues,
+          details: 'Estimated from page structure heuristics (no Claude)'
+        }
+      },
+      issues: contextIssues,
+      estimated: true,
+      message: 'Estimated using heuristic checks (no Claude)'
     };
   },
 
