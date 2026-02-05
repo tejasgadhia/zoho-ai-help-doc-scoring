@@ -8,10 +8,13 @@ const Storage = {
     API_KEY: 'aiDocScorer_apiKey',
     THEME: 'aiDocScorer_theme',
     HISTORY: 'aiDocScorer_history',
-    SETTINGS: 'aiDocScorer_settings'
+    SETTINGS: 'aiDocScorer_settings',
+    CLAUDE_CACHE: 'aiDocScorer_claudeCache'
   },
 
   MAX_HISTORY_ITEMS: 50,
+  MAX_CACHE_ITEMS: 50,
+  CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000,
 
   /**
    * Save API key (encrypted with basic obfuscation)
@@ -131,6 +134,54 @@ const Storage = {
    */
   clearHistory() {
     localStorage.removeItem(this.KEYS.HISTORY);
+  },
+
+  /**
+   * Get Claude cache map
+   * @returns {Object} Cache map
+   */
+  getClaudeCache() {
+    try {
+      const data = localStorage.getItem(this.KEYS.CLAUDE_CACHE);
+      return data ? JSON.parse(data) : {};
+    } catch {
+      return {};
+    }
+  },
+
+  /**
+   * Get cached Claude response by hash
+   * @param {string} hash - Cache key
+   * @returns {Object|null} Cached entry or null
+   */
+  getClaudeCacheEntry(hash) {
+    const cache = this.getClaudeCache();
+    const entry = cache[hash];
+    if (!entry) return null;
+    if (entry.savedAt && Date.now() - new Date(entry.savedAt).getTime() > this.CACHE_TTL_MS) {
+      delete cache[hash];
+      localStorage.setItem(this.KEYS.CLAUDE_CACHE, JSON.stringify(cache));
+      return null;
+    }
+    return entry;
+  },
+
+  /**
+   * Save Claude response to cache
+   * @param {string} hash - Cache key
+   * @param {Object} payload - Cached data
+   */
+  saveClaudeCacheEntry(hash, payload) {
+    const cache = this.getClaudeCache();
+    cache[hash] = {
+      ...payload,
+      savedAt: new Date().toISOString()
+    };
+    const entries = Object.entries(cache)
+      .sort((a, b) => new Date(b[1].savedAt) - new Date(a[1].savedAt))
+      .slice(0, this.MAX_CACHE_ITEMS);
+    const pruned = Object.fromEntries(entries);
+    localStorage.setItem(this.KEYS.CLAUDE_CACHE, JSON.stringify(pruned));
   },
 
   /**

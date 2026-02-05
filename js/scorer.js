@@ -89,8 +89,21 @@ const Scorer = {
 
       try {
         const textForAnalysis = Parser.getTextForAnalysis(content);
-        const claudeResults = await ClaudeClient.scoreSemanticCriteria(apiKey, content, textForAnalysis);
-        const transformedScores = ClaudeClient.transformScores(claudeResults);
+        const cacheKey = this.hashText(textForAnalysis);
+        const cached = Storage.getClaudeCacheEntry(cacheKey);
+        let claudeResults;
+        let transformedScores;
+
+        if (cached) {
+          claudeResults = cached.raw;
+          transformedScores = cached.transformed;
+          results.meta.claudeCache = { status: 'hit', key: cacheKey, savedAt: cached.savedAt };
+        } else {
+          claudeResults = await ClaudeClient.scoreSemanticCriteria(apiKey, content, textForAnalysis);
+          transformedScores = ClaudeClient.transformScores(claudeResults);
+          Storage.saveClaudeCacheEntry(cacheKey, { raw: claudeResults, transformed: transformedScores });
+          results.meta.claudeCache = { status: 'miss', key: cacheKey };
+        }
 
         onProgress({ step: 'claude', message: 'Processing AI results...', percent: 80 });
 
@@ -122,6 +135,15 @@ const Scorer = {
     onProgress({ step: 'complete', message: 'Scoring complete', percent: 100 });
 
     return results;
+  },
+
+  hashText(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return (hash >>> 0).toString(16);
   },
 
   /**
