@@ -46,8 +46,15 @@ const Scorer = {
     // Step 1: Rule-based scoring
     onProgress({ step: 'rules', message: 'Running rule-based analysis...', percent: 10 });
 
-    // Content Structure (rule-based)
-    const contentStructureResults = ContentStructureRules.scoreAll(metrics);
+    onProgress({ step: 'rules', message: 'Analyzing terminology...', percent: 25 });
+    onProgress({ step: 'rules', message: 'Checking text vs visuals...', percent: 40 });
+
+    const [contentStructureResults, terminologyResults, textVisualsResults] = await Promise.all([
+      Promise.resolve(ContentStructureRules.scoreAll(metrics)),
+      Promise.resolve(TerminologyRules.scoreAll(content)),
+      Promise.resolve(TextOverVisualsRules.scoreAll(metrics, content))
+    ]);
+
     results.categories['content-structure'] = {
       id: 'CAT-01',
       name: 'Content Structure',
@@ -57,10 +64,6 @@ const Scorer = {
       issues: contentStructureResults.allIssues
     };
 
-    onProgress({ step: 'rules', message: 'Analyzing terminology...', percent: 25 });
-
-    // Terminology (rule-based)
-    const terminologyResults = TerminologyRules.scoreAll(content);
     results.categories['terminology'] = {
       id: 'CAT-02',
       name: 'Consistent Terminology',
@@ -70,10 +73,6 @@ const Scorer = {
       issues: terminologyResults.allIssues
     };
 
-    onProgress({ step: 'rules', message: 'Checking text vs visuals...', percent: 40 });
-
-    // Text Over Visuals (rule-based)
-    const textVisualsResults = TextOverVisualsRules.scoreAll(metrics, content);
     results.categories['text-over-visuals'] = {
       id: 'CAT-08',
       name: 'Text Over Visuals',
