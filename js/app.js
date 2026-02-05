@@ -322,6 +322,9 @@ const App = {
       summaryEl.textContent = results.summary;
     }
 
+    // Render warnings
+    this.renderWarnings(results);
+
     // Render charts
     Charts.createScoreGauge('scoreGauge', results.compositeScore);
     Charts.createCategoryChart('categoryChart', results.categories);
@@ -337,6 +340,34 @@ const App = {
 
     // Update history sidebar
     this.renderHistory();
+  },
+
+  /**
+   * Render non-fatal warnings (extraction/scoring)
+   * @param {Object} results - Scoring results
+   */
+  renderWarnings(results) {
+    const panel = document.getElementById('warningPanel');
+    if (!panel) return;
+
+    const warnings = [];
+    const extractionWarnings = this.state.content?.meta?.extractionWarnings || [];
+    extractionWarnings.forEach(message => warnings.push(message));
+    if (results.meta && results.meta.claudeError) {
+      warnings.push(`Claude analysis failed: ${results.meta.claudeError}`);
+    }
+
+    if (warnings.length === 0) {
+      panel.classList.add('hidden');
+      panel.innerHTML = '';
+      return;
+    }
+
+    panel.classList.remove('hidden');
+    panel.innerHTML = `
+      <strong>Warnings</strong>
+      <ul>${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+    `;
   },
 
   /**
