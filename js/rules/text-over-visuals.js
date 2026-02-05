@@ -72,6 +72,7 @@ const TextOverVisualsRules = {
       issues.push({
         severity: 'warning',
         message: 'Procedural content with many screenshots',
+        details: `${images.count} images with procedural lists detected`,
         fix: 'Ensure step text is complete without needing to reference images'
       });
     }

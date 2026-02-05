@@ -27,6 +27,40 @@ const TerminologyRules = {
     'open', 'close', 'expand', 'collapse', 'toggle', 'check', 'uncheck'
   ],
 
+  STOP_WORDS: new Set([
+    'the', 'and', 'that', 'this', 'with', 'from', 'your', 'you', 'for', 'are', 'was', 'were',
+    'will', 'have', 'has', 'had', 'then', 'than', 'into', 'onto', 'over', 'under', 'after',
+    'before', 'when', 'where', 'what', 'which', 'who', 'whom', 'why', 'how', 'can', 'cannot',
+    'could', 'should', 'would', 'not', 'yes', 'no', 'use', 'using', 'used', 'via', 'per', 'each'
+  ]),
+
+  normalizeTerm(term) {
+    return term
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/(ing|ed|es|s)$/i, '');
+  },
+
+  extractTerminologyClusters(content) {
+    const text = content.text.fullText.toLowerCase();
+    const tokens = text.split(/[^a-z0-9-]+/).filter(Boolean);
+    const clusters = {};
+
+    tokens.forEach(token => {
+      if (token.length < 4 || this.STOP_WORDS.has(token)) return;
+      const root = this.normalizeTerm(token);
+      if (!root || root.length < 3) return;
+      if (!clusters[root]) {
+        clusters[root] = { variants: {}, total: 0 };
+      }
+      clusters[root].variants[token] = (clusters[root].variants[token] || 0) + 1;
+      clusters[root].total += 1;
+    });
+
+    return clusters;
+  },
+
   /**
    * Extract all action terms from the content
    * @param {Object} content - Normalized content
@@ -66,9 +100,11 @@ const TerminologyRules = {
    */
   scoreTermConsistency(content) {
     const terms = this.extractActionTerms(content);
+    const clusters = this.extractTerminologyClusters(content);
     const issues = [];
     let inconsistentGroups = 0;
     let totalGroups = 0;
+    let clusterInconsistencies = 0;
 
     Object.entries(terms).forEach(([primary, data]) => {
       const variantsUsed = Object.keys(data.variants);
@@ -99,6 +135,23 @@ const TerminologyRules = {
       }
     });
 
+    Object.entries(clusters).forEach(([root, data]) => {
+      const variantsUsed = Object.keys(data.variants);
+      const significantVariants = variantsUsed.filter(term => data.variants[term] >= 2);
+      if (significantVariants.length < 2 || data.total < 4) return;
+
+      const pluralOnly = significantVariants.every(term => term === root || term === `${root}s`);
+      if (pluralOnly) return;
+
+      clusterInconsistencies += 1;
+      issues.push({
+        severity: 'info',
+        message: `Potential terminology variants for "${root}"`,
+        details: `Found: ${significantVariants.map(term => `"${term}" (${data.variants[term]}x)`).join(', ')}`,
+        fix: `Standardize on a single term for "${root}" where possible`
+      });
+    });
+
     // Calculate score
     let score = 10;
     if (totalGroups > 0) {
@@ -108,13 +161,13 @@ const TerminologyRules = {
 
     // Adjust for severity
     const criticalIssues = issues.filter(i => i.severity === 'critical').length;
-    score = Math.max(0, score - criticalIssues * 2);
+    score = Math.max(0, score - criticalIssues * 2 - Math.min(3, clusterInconsistencies));
 
     return {
       criterionId: 'AV-01',
       score,
       issues,
-      details: `Analyzed ${totalGroups} term groups. ${inconsistentGroups} have inconsistent usage.`,
+      details: `Analyzed ${totalGroups} term groups. ${inconsistentGroups} have inconsistent usage. ${clusterInconsistencies} potential synonym clusters detected.`,
       termAnalysis: terms
     };
   },
