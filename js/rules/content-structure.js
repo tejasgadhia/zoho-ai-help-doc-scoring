@@ -45,11 +45,43 @@ const ContentStructureRules = {
       });
     });
 
+    if (paragraphs.sentences && paragraphs.sentences.total > 0) {
+      const longRatio = paragraphs.sentences.longCount / paragraphs.sentences.total;
+      if (longRatio > 0.2) {
+        score -= 1;
+        issues.push({
+          severity: 'warning',
+          message: `${paragraphs.sentences.longCount} long sentences detected`,
+          fix: 'Split long sentences into shorter, single-idea statements'
+        });
+      }
+
+      if (paragraphs.sentences.complexCount > 0) {
+        issues.push({
+          severity: 'info',
+          message: `${paragraphs.sentences.complexCount} sentences have multiple clauses`,
+          fix: 'Reduce clause density for better readability'
+        });
+      }
+
+      paragraphs.sentences.longSamples.forEach(sample => {
+        issues.push({
+          severity: 'info',
+          message: `Long sentence in paragraph ${sample.paragraphIndex + 1} (${sample.wordCount} words)`,
+          location: `Paragraph ${sample.paragraphIndex + 1}`,
+          excerpt: sample.text,
+          fix: 'Break this sentence into shorter sentences'
+        });
+      });
+    }
+
+    score = Math.max(0, Math.min(10, score));
+
     return {
       criterionId: 'CS-01',
       score,
       issues,
-      details: `${paragraphs.longCount} of ${paragraphs.count} paragraphs exceed 150 words. Average length: ${paragraphs.avgLength} words.`
+      details: `${paragraphs.longCount} of ${paragraphs.count} paragraphs exceed 150 words. Average length: ${paragraphs.avgLength} words. Avg sentence length: ${paragraphs.sentences ? paragraphs.sentences.avgLength : 0} words.`
     };
   },
 

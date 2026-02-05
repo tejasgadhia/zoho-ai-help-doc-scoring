@@ -67,6 +67,49 @@ const Parser = {
     const avgParagraphLength = paragraphLengths.length > 0
       ? paragraphLengths.reduce((a, b) => a + b, 0) / paragraphLengths.length
       : 0;
+    const sentenceThreshold = 25;
+    const complexClauseThreshold = 2;
+    const sentenceSamples = [];
+    const sentenceLengths = [];
+    let totalSentences = 0;
+    let longSentences = 0;
+    let complexSentences = 0;
+    const splitSentences = text => text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [];
+
+    structure.paragraphs.forEach((paragraph, paragraphIndex) => {
+      const sentences = splitSentences(paragraph.text);
+      sentences.forEach((sentence, sentenceIndex) => {
+        const trimmed = sentence.trim();
+        if (trimmed.length === 0) return;
+        const words = trimmed.split(/\s+/).filter(w => w.length > 0);
+        const wordCount = words.length;
+        if (wordCount === 0) return;
+        const clauseCount = (trimmed.match(/[,;:]/g) || []).length;
+        const isLong = wordCount > sentenceThreshold;
+        const isComplex = clauseCount >= complexClauseThreshold && wordCount >= 20;
+
+        totalSentences += 1;
+        sentenceLengths.push(wordCount);
+        if (isLong) {
+          longSentences += 1;
+          if (sentenceSamples.length < 5) {
+            const excerpt = trimmed.length > 120 ? `${trimmed.slice(0, 120)}...` : trimmed;
+            sentenceSamples.push({
+              text: excerpt,
+              wordCount,
+              paragraphIndex,
+              sentenceIndex
+            });
+          }
+        }
+        if (isComplex) {
+          complexSentences += 1;
+        }
+      });
+    });
+    const avgSentenceLength = sentenceLengths.length > 0
+      ? sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length
+      : 0;
 
     // Heading metrics
     const headingLevels = structure.headings.map(h => parseInt(h.level.replace('h', '')));
@@ -113,7 +156,14 @@ const Parser = {
           text: p.text.substring(0, 100) + '...',
           wordCount: p.wordCount,
           index: p.index
-        }))
+        })),
+        sentences: {
+          total: totalSentences,
+          avgLength: Math.round(avgSentenceLength),
+          longCount: longSentences,
+          complexCount: complexSentences,
+          longSamples: sentenceSamples
+        }
       },
       headings: {
         count: structure.headings.length,
