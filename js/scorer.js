@@ -46,8 +46,15 @@ const Scorer = {
     // Step 1: Rule-based scoring
     onProgress({ step: 'rules', message: 'Running rule-based analysis...', percent: 10 });
 
-    // Content Structure (rule-based)
-    const contentStructureResults = ContentStructureRules.scoreAll(metrics);
+    onProgress({ step: 'rules', message: 'Analyzing terminology...', percent: 25 });
+    onProgress({ step: 'rules', message: 'Checking text vs visuals...', percent: 40 });
+
+    const [contentStructureResults, terminologyResults, textVisualsResults] = await Promise.all([
+      Promise.resolve(ContentStructureRules.scoreAll(metrics)),
+      Promise.resolve(TerminologyRules.scoreAll(content)),
+      Promise.resolve(TextOverVisualsRules.scoreAll(metrics, content))
+    ]);
+
     results.categories['content-structure'] = {
       id: 'CAT-01',
       name: 'Content Structure',
@@ -57,10 +64,6 @@ const Scorer = {
       issues: contentStructureResults.allIssues
     };
 
-    onProgress({ step: 'rules', message: 'Analyzing terminology...', percent: 25 });
-
-    // Terminology (rule-based)
-    const terminologyResults = TerminologyRules.scoreAll(content);
     results.categories['terminology'] = {
       id: 'CAT-02',
       name: 'Consistent Terminology',
@@ -70,10 +73,6 @@ const Scorer = {
       issues: terminologyResults.allIssues
     };
 
-    onProgress({ step: 'rules', message: 'Checking text vs visuals...', percent: 40 });
-
-    // Text Over Visuals (rule-based)
-    const textVisualsResults = TextOverVisualsRules.scoreAll(metrics, content);
     results.categories['text-over-visuals'] = {
       id: 'CAT-08',
       name: 'Text Over Visuals',
@@ -89,8 +88,21 @@ const Scorer = {
 
       try {
         const textForAnalysis = Parser.getTextForAnalysis(content);
-        const claudeResults = await ClaudeClient.scoreSemanticCriteria(apiKey, content, textForAnalysis);
-        const transformedScores = ClaudeClient.transformScores(claudeResults);
+        const cacheKey = this.hashText(textForAnalysis);
+        const cached = Storage.getClaudeCacheEntry(cacheKey);
+        let claudeResults;
+        let transformedScores;
+
+        if (cached) {
+          claudeResults = cached.raw;
+          transformedScores = cached.transformed;
+          results.meta.claudeCache = { status: 'hit', key: cacheKey, savedAt: cached.savedAt };
+        } else {
+          claudeResults = await ClaudeClient.scoreSemanticCriteria(apiKey, content, textForAnalysis);
+          transformedScores = ClaudeClient.transformScores(claudeResults);
+          Storage.saveClaudeCacheEntry(cacheKey, { raw: claudeResults, transformed: transformedScores });
+          results.meta.claudeCache = { status: 'miss', key: cacheKey };
+        }
 
         onProgress({ step: 'claude', message: 'Processing AI results...', percent: 80 });
 
@@ -125,6 +137,15 @@ const Scorer = {
     onProgress({ step: 'complete', message: 'Scoring complete', percent: 100 });
 
     return results;
+  },
+
+  hashText(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return (hash >>> 0).toString(16);
   },
 
   /**

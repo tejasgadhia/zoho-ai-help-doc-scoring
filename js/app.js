@@ -167,9 +167,25 @@ const App = {
    */
   async processContent(rawContent) {
     try {
+      const nowMs = () => (typeof performance !== 'undefined' && performance.now
+        ? performance.now()
+        : Date.now());
+      const timings = {
+        receivedAt: new Date().toISOString()
+      };
+      if (rawContent && rawContent.meta && rawContent.meta.extractedAt) {
+        const extractedAt = new Date(rawContent.meta.extractedAt).getTime();
+        if (!Number.isNaN(extractedAt)) {
+          timings.extractionLatencyMs = Math.round(Date.now() - extractedAt);
+        }
+      }
+
       // Validate and normalize content
+      const parseStart = nowMs();
       const content = Parser.normalize(rawContent);
+      timings.parseMs = Math.round(nowMs() - parseStart);
       this.state.content = content;
+      this.state.timings = timings;
 
       // Switch to scoring view
       this.state.view = 'scoring';
@@ -198,15 +214,22 @@ const App = {
     this.updateUI();
 
     try {
+      const nowMs = () => (typeof performance !== 'undefined' && performance.now
+        ? performance.now()
+        : Date.now());
       const apiKey = Storage.getApiKey();
       const metrics = this.state.content.metrics;
 
+      const scoringStart = nowMs();
       const results = await Scorer.scoreAll(
         this.state.content,
         metrics,
         apiKey,
         (progress) => this.updateProgress(progress)
       );
+      const timings = this.state.timings || {};
+      timings.scoringMs = Math.round(nowMs() - scoringStart);
+      results.meta.performance = timings;
 
       this.state.results = results;
 
@@ -221,10 +244,19 @@ const App = {
       });
 
       // Switch to results view
+      const renderStart = nowMs();
       this.state.view = 'results';
       this.state.isScoring = false;
       this.updateUI();
       this.renderResults();
+      if (results.meta.performance) {
+        results.meta.performance.renderMs = Math.round(nowMs() - renderStart);
+        const total = ['parseMs', 'scoringMs', 'renderMs']
+          .map(key => results.meta.performance[key])
+          .filter(value => typeof value === 'number')
+          .reduce((sum, value) => sum + value, 0);
+        results.meta.performance.totalMs = total;
+      }
 
     } catch (error) {
       console.error('Scoring failed:', error);
@@ -290,6 +322,9 @@ const App = {
       summaryEl.textContent = results.summary;
     }
 
+    // Render warnings
+    this.renderWarnings(results);
+
     // Render charts
     Charts.createScoreGauge('scoreGauge', results.compositeScore);
     Charts.createCategoryChart('categoryChart', results.categories);
@@ -305,6 +340,34 @@ const App = {
 
     // Update history sidebar
     this.renderHistory();
+  },
+
+  /**
+   * Render non-fatal warnings (extraction/scoring)
+   * @param {Object} results - Scoring results
+   */
+  renderWarnings(results) {
+    const panel = document.getElementById('warningPanel');
+    if (!panel) return;
+
+    const warnings = [];
+    const extractionWarnings = this.state.content?.meta?.extractionWarnings || [];
+    extractionWarnings.forEach(message => warnings.push(message));
+    if (results.meta && results.meta.claudeError) {
+      warnings.push(`Claude analysis failed: ${results.meta.claudeError}`);
+    }
+
+    if (warnings.length === 0) {
+      panel.classList.add('hidden');
+      panel.innerHTML = '';
+      return;
+    }
+
+    panel.classList.remove('hidden');
+    panel.innerHTML = `
+      <strong>Warnings</strong>
+      <ul>${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+    `;
   },
 
   /**

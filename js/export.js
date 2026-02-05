@@ -34,6 +34,32 @@ const Export = {
     lines.push(`> ${results.summary}`);
     lines.push('');
 
+    if (results.meta && results.meta.performance) {
+      const perf = results.meta.performance;
+      lines.push('---');
+      lines.push('');
+      lines.push('## Performance');
+      lines.push('');
+      lines.push('| Phase | Time (ms) |');
+      lines.push('|-------|-----------|');
+      if (typeof perf.extractionLatencyMs === 'number') {
+        lines.push(`| Extraction latency | ${perf.extractionLatencyMs} |`);
+      }
+      if (typeof perf.parseMs === 'number') {
+        lines.push(`| Parsing | ${perf.parseMs} |`);
+      }
+      if (typeof perf.scoringMs === 'number') {
+        lines.push(`| Scoring | ${perf.scoringMs} |`);
+      }
+      if (typeof perf.renderMs === 'number') {
+        lines.push(`| Rendering | ${perf.renderMs} |`);
+      }
+      if (typeof perf.totalMs === 'number') {
+        lines.push(`| Total | ${perf.totalMs} |`);
+      }
+      lines.push('');
+    }
+
     // Category Breakdown
     lines.push('---');
     lines.push('');

@@ -985,6 +985,19 @@ a:hover {
   font-size: 0.875rem;
 }
 
+.warning-panel {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.warning-panel ul {
+  margin: var(--space-xs) 0 0 var(--space-md);
+}
+
 /* ============================================
    Results View
    ============================================ */

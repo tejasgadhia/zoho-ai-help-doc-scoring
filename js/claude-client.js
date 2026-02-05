@@ -7,6 +7,8 @@ const ClaudeClient = {
   API_URL: 'https://api.anthropic.com/v1/messages',
   MODEL: 'claude-sonnet-4-20250514',
   MAX_TOKENS: 4096,
+  MAX_RETRIES: 3,
+  BASE_RETRY_MS: 1000,
 
   /**
    * Make a request to Claude API
@@ -39,31 +41,49 @@ const ClaudeClient = {
       body.system = systemPrompt;
     }
 
-    try {
-      const response = await fetch(this.API_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body)
-      });
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-      if (!response.ok) {
+    for (let attempt = 0; attempt <= this.MAX_RETRIES; attempt += 1) {
+      try {
+        const response = await fetch(this.API_URL, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+          return await response.json();
+        }
+
         const errorData = await response.json().catch(() => ({}));
         if (response.status === 401) {
           throw new Error('Invalid API key. Please check your Claude API key.');
         } else if (response.status === 429) {
+          if (attempt < this.MAX_RETRIES) {
+            const retryAfter = parseInt(response.headers.get('retry-after'), 10);
+            const delay = Number.isNaN(retryAfter)
+              ? this.BASE_RETRY_MS * Math.pow(2, attempt)
+              : retryAfter * 1000;
+            await sleep(delay);
+            continue;
+          }
           throw new Error('Rate limit exceeded. Please wait and try again.');
         } else if (response.status === 400) {
           throw new Error(`Bad request: ${errorData.error?.message || 'Unknown error'}`);
         }
         throw new Error(`API error (${response.status}): ${errorData.error?.message || 'Unknown error'}`);
+      } catch (error) {
+        const isNetwork = error.name === 'TypeError' && error.message.includes('fetch');
+        if (isNetwork && attempt < this.MAX_RETRIES) {
+          const delay = this.BASE_RETRY_MS * Math.pow(2, attempt);
+          await sleep(delay);
+          continue;
+        }
+        if (isNetwork) {
+          throw new Error('Network error. Please check your internet connection.');
+        }
+        throw error;
       }
-
-      return await response.json();
-    } catch (error) {
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        throw new Error('Network error. Please check your internet connection.');
-      }
-      throw error;
     }
   },
 
