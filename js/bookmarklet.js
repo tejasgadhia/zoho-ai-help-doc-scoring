@@ -38,6 +38,7 @@
         images: [],
         tables: [],
         codeBlocks: [],
+        callouts: [],
         links: []
       },
       text: {
@@ -156,12 +157,14 @@
     // Extract tables
     const tables = mainContent.querySelectorAll('table');
     tables.forEach((table, index) => {
+      const captionEl = table.querySelector('caption');
       const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
       const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
         Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
       ).filter(row => row.length > 0);
 
       content.structure.tables.push({
+        caption: captionEl ? captionEl.textContent.trim() : null,
         headers: headers,
         rows: rows,
         rowCount: rows.length,
@@ -175,15 +178,59 @@
     const processedCode = new Set();
     codeBlocks.forEach((code, index) => {
       const text = code.textContent.trim();
+      const isInline = code.tagName.toLowerCase() === 'code' && !code.closest('pre');
       // Avoid duplicates (code inside pre)
       if (text.length > 0 && !processedCode.has(text)) {
         processedCode.add(text);
         content.structure.codeBlocks.push({
           content: text,
+          type: isInline ? 'inline' : 'block',
           language: code.className.replace('language-', '') || 'unknown',
           index: index
         });
       }
+    });
+
+    // Extract callouts/notes
+    const calloutSelectors = [
+      '.callout',
+      '.notice',
+      '.alert',
+      '.warning',
+      '.info',
+      '.tip',
+      '.note',
+      '.admonition',
+      '.kb-callout',
+      '.kb-note',
+      '.kb-warning',
+      '.kb-tip',
+      '[role="note"]',
+      '[role="alert"]'
+    ];
+    const calloutElements = new Set();
+    calloutSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(node => calloutElements.add(node));
+    });
+    let calloutIndex = 0;
+    calloutElements.forEach(el => {
+      const text = el.textContent.replace(/\s+/g, ' ').trim();
+      if (text.length === 0) return;
+      const classNames = (el.className || '').toLowerCase();
+      const role = (el.getAttribute('role') || '').toLowerCase();
+      let type = 'note';
+      ['warning', 'alert', 'caution', 'danger', 'tip', 'info', 'note', 'success'].some(label => {
+        if (classNames.includes(label) || role === label) {
+          type = label;
+          return true;
+        }
+        return false;
+      });
+      content.structure.callouts.push({
+        type,
+        text,
+        index: calloutIndex++
+      });
     });
 
     // Extract links

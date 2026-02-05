@@ -97,7 +97,8 @@ const Parser = {
       structure.paragraphs.length +
       structure.lists.length +
       structure.tables.length +
-      structure.codeBlocks.length;
+      structure.codeBlocks.length +
+      structure.callouts.length;
     const visualBlocks = structure.images.length + structure.tables.length;
     const visualToContentRatio = totalContentBlocks > 0
       ? visualBlocks / totalContentBlocks
@@ -152,7 +153,8 @@ const Parser = {
         visualToContentRatio: Math.round(visualToContentRatio * 100) / 100,
         wordCount: text.wordCount,
         codeBlocks: structure.codeBlocks.length,
-        tables: structure.tables.length
+        tables: structure.tables.length,
+        callouts: structure.callouts.length
       },
       links: {
         total: structure.links.length,
@@ -252,6 +254,55 @@ const Parser = {
           sections.push(`  ${marker} ${item}`);
         });
       });
+    }
+
+    // Add callouts/notes
+    if (content.structure.callouts && content.structure.callouts.length > 0) {
+      sections.push('\n## Callouts:');
+      content.structure.callouts.forEach((callout, i) => {
+        sections.push(`[Callout ${i + 1} - ${callout.type}] ${callout.text}`);
+      });
+    }
+
+    // Add tables (limited rows for brevity)
+    if (content.structure.tables.length > 0) {
+      const maxTables = 3;
+      const maxRows = 3;
+      const normalizeCell = value => value.replace(/\s+/g, ' ').trim();
+      const formatRow = row => `| ${row.map(normalizeCell).join(' | ')} |`;
+
+      content.structure.tables.slice(0, maxTables).forEach((table, i) => {
+        const title = table.caption ? ` - ${table.caption}` : '';
+        sections.push(`\n## Table ${i + 1}${title}`);
+        if (table.headers && table.headers.length > 0) {
+          sections.push(formatRow(table.headers));
+          sections.push(`| ${table.headers.map(() => '---').join(' | ')} |`);
+        }
+        if (table.rows && table.rows.length > 0) {
+          table.rows.slice(0, maxRows).forEach(row => {
+            if (row.length > 0) {
+              sections.push(formatRow(row));
+            }
+          });
+        }
+      });
+    }
+
+    // Add code blocks (block-level only, limited)
+    if (content.structure.codeBlocks.length > 0) {
+      const blockCode = content.structure.codeBlocks.filter(block => block.type !== 'inline');
+      if (blockCode.length > 0) {
+        const maxCodeBlocks = 3;
+        sections.push('\n## Code Blocks:');
+        blockCode.slice(0, maxCodeBlocks).forEach((block, i) => {
+          const language = block.language && block.language !== 'unknown' ? block.language : '';
+          const trimmed = block.content.length > 500 ? `${block.content.slice(0, 500)}...` : block.content;
+          sections.push(`[Code ${i + 1}]`);
+          sections.push(`\`\`\`${language}`);
+          sections.push(trimmed);
+          sections.push('```');
+        });
+      }
     }
 
     return sections.join('\n').trim();
