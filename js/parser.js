@@ -70,7 +70,11 @@ const Parser = {
 
     // Heading metrics
     const headingLevels = structure.headings.map(h => parseInt(h.level.replace('h', '')));
-    const hasH1 = headingLevels.includes(1);
+    const h1Count = headingLevels.filter(level => level === 1).length;
+    const h2Count = headingLevels.filter(level => level === 2).length;
+    const hasH1 = h1Count > 0;
+    const hasH2 = h2Count > 0;
+    const firstHeadingLevel = headingLevels.length > 0 ? headingLevels[0] : null;
     const headingHierarchyValid = this.validateHeadingHierarchy(headingLevels);
 
     // List metrics
@@ -118,6 +122,10 @@ const Parser = {
       headings: {
         count: structure.headings.length,
         hasH1,
+        hasH2,
+        h1Count,
+        h2Count,
+        firstLevel: firstHeadingLevel,
         hierarchyValid: headingHierarchyValid,
         levels: headingLevels,
         distribution: this.getHeadingDistribution(headingLevels)

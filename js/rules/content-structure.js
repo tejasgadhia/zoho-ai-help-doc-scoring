@@ -144,6 +144,36 @@ const ContentStructureRules = {
       });
     }
 
+    // Check for multiple H1s
+    if (headings.h1Count > 1) {
+      score -= 1;
+      issues.push({
+        severity: 'warning',
+        message: `Multiple H1 headings found (${headings.h1Count})`,
+        fix: 'Use a single H1 for the page title and demote others to H2/H3'
+      });
+    }
+
+    // Check for missing hierarchy context (starts too deep)
+    if (headings.firstLevel && headings.firstLevel > 1) {
+      score -= 1;
+      issues.push({
+        severity: 'warning',
+        message: `First heading starts at h${headings.firstLevel}`,
+        fix: 'Start with an H1 heading to establish page context'
+      });
+    }
+
+    // Check for missing H2 when deeper levels exist
+    if (!headings.hasH2 && headings.levels.some(level => level >= 3)) {
+      score -= 1;
+      issues.push({
+        severity: 'warning',
+        message: 'Missing H2 headings before deeper sections',
+        fix: 'Add H2 headings to group sections before using H3/H4'
+      });
+    }
+
     // Check hierarchy
     if (!headings.hierarchyValid.valid) {
       const skipCount = headings.hierarchyValid.issues.length;
