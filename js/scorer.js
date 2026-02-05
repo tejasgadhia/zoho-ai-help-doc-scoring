@@ -108,13 +108,16 @@ const Scorer = {
       this.addEstimatedScores(results, content, metrics);
     }
 
-    // Step 3: Calculate composite score
+    // Step 3: Add section-level scoring (if available)
+    this.addSectionScores(results, content);
+
+    // Step 4: Calculate composite score
     onProgress({ step: 'compute', message: 'Calculating final scores...', percent: 90 });
 
     results.compositeScore = this.calculateCompositeScore(results.categories);
     results.status = this.getStatus(results.compositeScore);
 
-    // Step 4: Collect and prioritize issues
+    // Step 5: Collect and prioritize issues
     results.allIssues = this.collectAllIssues(results.categories);
     results.topIssues = this.getTopIssues(results.allIssues, 5);
     results.summary = this.generateSummary(results);
@@ -348,6 +351,123 @@ const Scorer = {
       estimated: true,
       message: 'Estimated using heuristic checks (no Claude)'
     };
+  },
+
+  addSectionScores(results, content) {
+    if (!content.sections || content.sections.length === 0) {
+      return;
+    }
+
+    const buildSectionMetrics = section => {
+      const paragraphLengths = section.paragraphs.map(p => p.wordCount);
+      const longParagraphs = section.paragraphs.filter(p => p.wordCount > 150);
+      const avgParagraphLength = paragraphLengths.length > 0
+        ? paragraphLengths.reduce((a, b) => a + b, 0) / paragraphLengths.length
+        : 0;
+      const totalListItems = section.lists.reduce((sum, list) => sum + list.itemCount, 0);
+      const listToParagraphRatio = section.paragraphs.length > 0
+        ? section.lists.length / section.paragraphs.length
+        : 0;
+      const imagesWithAlt = section.images.filter(img => img.hasAlt).length;
+      const altTextCoverage = section.images.length > 0
+        ? imagesWithAlt / section.images.length
+        : 1;
+      const totalContentBlocks = section.paragraphs.length +
+        section.lists.length +
+        section.tables.length +
+        section.codeBlocks.length;
+      const visualBlocks = section.images.length + section.tables.length;
+      const visualToContentRatio = totalContentBlocks > 0
+        ? visualBlocks / totalContentBlocks
+        : 0;
+
+      return {
+        paragraphs: {
+          count: section.paragraphs.length,
+          avgLength: Math.round(avgParagraphLength),
+          maxLength: paragraphLengths.length > 0 ? Math.max(...paragraphLengths) : 0,
+          longCount: longParagraphs.length,
+          longParagraphs: longParagraphs.map((p, index) => ({
+            text: p.text.substring(0, 100) + '...',
+            wordCount: p.wordCount,
+            index
+          })),
+          sentences: {
+            total: 0,
+            avgLength: 0,
+            longCount: 0,
+            complexCount: 0,
+            longSamples: []
+          }
+        },
+        headings: {
+          count: section.title ? 1 : 0,
+          hasH1: section.level === 1,
+          hierarchyValid: { valid: true, issues: [] },
+          levels: section.level ? [section.level] : [],
+          distribution: section.level ? { [`h${section.level}`]: 1 } : {}
+        },
+        lists: {
+          count: section.lists.length,
+          totalItems: totalListItems,
+          listToParagraphRatio: Math.round(listToParagraphRatio * 100) / 100
+        },
+        images: {
+          count: section.images.length,
+          withAlt: imagesWithAlt,
+          withoutAlt: section.images.length - imagesWithAlt,
+          altTextCoverage: Math.round(altTextCoverage * 100) / 100,
+          imageToTextRatio: section.wordCount > 0
+            ? Math.round((section.images.length / (section.wordCount / 100)) * 100) / 100
+            : 0,
+          missingAlt: []
+        },
+        content: {
+          totalBlocks: totalContentBlocks,
+          visualBlocks,
+          visualToContentRatio: Math.round(visualToContentRatio * 100) / 100,
+          wordCount: section.wordCount,
+          codeBlocks: section.codeBlocks.length,
+          tables: section.tables.length
+        },
+        links: {
+          total: 0,
+          internal: 0,
+          external: 0
+        }
+      };
+    };
+
+    const sectionScores = content.sections.map(section => {
+      const sectionMetrics = buildSectionMetrics(section);
+      const brevity = ContentStructureRules.scoreParagraphBrevity(sectionMetrics);
+      const listUsage = ContentStructureRules.scoreListUsage(sectionMetrics);
+      const sectionScore = Math.round(((brevity.score + listUsage.score) / 2) * 10) / 10;
+
+      return {
+        title: section.title,
+        level: section.level,
+        score: sectionScore,
+        criteria: {
+          'CS-01': brevity,
+          'CS-02': listUsage
+        },
+        issues: [...brevity.issues, ...listUsage.issues],
+        wordCount: section.wordCount
+      };
+    });
+
+    const rollupScore = sectionScores.length > 0
+      ? Math.round((sectionScores.reduce((sum, section) => sum + section.score, 0) / sectionScores.length) * 10) / 10
+      : null;
+
+    if (rollupScore !== null) {
+      results.categories['content-structure'].sectionScores = sectionScores;
+      results.categories['content-structure'].sectionRollup = rollupScore;
+      results.categories['content-structure'].score = Math.round(((results.categories['content-structure'].score + rollupScore) / 2) * 10) / 10;
+    }
+
+    results.sections = sectionScores;
   },
 
   /**

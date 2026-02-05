@@ -39,6 +39,7 @@
         codeBlocks: [],
         links: []
       },
+      sections: [],
       text: {
         fullText: '',
         wordCount: 0
@@ -162,6 +163,87 @@
         index: index
       });
     });
+
+    // Build section map for section-level scoring
+    const countWords = text => text.split(/\s+/).filter(w => w.length > 0).length;
+    const elements = mainContent.querySelectorAll('h1,h2,h3,h4,h5,h6,p,ul,ol,img,table,pre,code');
+    let currentSection = {
+      title: content.meta.title || 'Introduction',
+      level: 1,
+      paragraphs: [],
+      lists: [],
+      images: [],
+      tables: [],
+      codeBlocks: [],
+      wordCount: 0
+    };
+
+    const pushSection = () => {
+      const hasContent = currentSection.paragraphs.length ||
+        currentSection.lists.length ||
+        currentSection.images.length ||
+        currentSection.tables.length ||
+        currentSection.codeBlocks.length;
+      if (hasContent) {
+        content.sections.push(currentSection);
+      }
+    };
+
+    elements.forEach(el => {
+      const tag = el.tagName.toLowerCase();
+      if (tag.startsWith('h')) {
+        pushSection();
+        currentSection = {
+          title: el.textContent.trim(),
+          level: parseInt(tag.replace('h', '')),
+          paragraphs: [],
+          lists: [],
+          images: [],
+          tables: [],
+          codeBlocks: [],
+          wordCount: 0
+        };
+        return;
+      }
+
+      if (tag === 'p') {
+        const text = el.textContent.trim();
+        if (text.length > 0) {
+          const wordCount = countWords(text);
+          currentSection.paragraphs.push({ text, wordCount });
+          currentSection.wordCount += wordCount;
+        }
+      }
+
+      if (tag === 'ul' || tag === 'ol') {
+        const items = Array.from(el.querySelectorAll(':scope > li')).map(li => li.textContent.trim()).filter(Boolean);
+        if (items.length > 0) {
+          const itemCount = items.length;
+          currentSection.lists.push({ type: tag, items, itemCount });
+          currentSection.wordCount += items.reduce((sum, item) => sum + countWords(item), 0);
+        }
+      }
+
+      if (tag === 'img') {
+        currentSection.images.push({ hasAlt: !!el.alt && el.alt.trim().length > 0 });
+      }
+
+      if (tag === 'table') {
+        const rows = Array.from(el.querySelectorAll('tr')).map(tr =>
+          Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+        ).filter(row => row.length > 0);
+        currentSection.tables.push({ rowCount: rows.length });
+      }
+
+      if (tag === 'pre') {
+        const text = el.textContent.trim();
+        if (text.length > 0) {
+          currentSection.codeBlocks.push({ content: text });
+        }
+      }
+    });
+
+    pushSection();
 
     // Get full text content
     content.text.fullText = mainContent.textContent
