@@ -45,6 +45,12 @@
           "description": "Avoid duplicated or conflicting instructions",
           "type": "claude",
           "weight": 0.10
+        },
+        "CS-07": {
+          "name": "Link integrity",
+          "description": "Ensure internal links and anchors resolve correctly",
+          "type": "rule",
+          "weight": 0.10
         }
       }
     },

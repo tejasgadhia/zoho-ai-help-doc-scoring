@@ -103,6 +103,7 @@ const Parser = {
     // Link metrics
     const internalLinks = structure.links.filter(l => l.type === 'internal').length;
     const externalLinks = structure.links.filter(l => l.type === 'external').length;
+    const brokenLinks = structure.links.filter(l => l.isBroken);
 
     return {
       paragraphs: {
@@ -150,7 +151,13 @@ const Parser = {
       links: {
         total: structure.links.length,
         internal: internalLinks,
-        external: externalLinks
+        external: externalLinks,
+        brokenCount: brokenLinks.length,
+        brokenLinks: brokenLinks.map(link => ({
+          href: link.href,
+          reason: link.reason,
+          index: link.index
+        }))
       }
     };
   },

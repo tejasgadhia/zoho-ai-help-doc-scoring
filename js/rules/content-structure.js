@@ -180,6 +180,55 @@ const ContentStructureRules = {
   },
 
   /**
+   * Score link integrity (CS-07)
+   * Flag broken internal anchors
+   * @param {Object} metrics - Computed metrics
+   * @returns {Object} Score and issues
+   */
+  scoreLinkIntegrity(metrics) {
+    const { links } = metrics;
+    const issues = [];
+
+    if (!links || links.total === 0) {
+      return {
+        criterionId: 'CS-07',
+        score: 10,
+        issues: [],
+        details: 'No links found'
+      };
+    }
+
+    const brokenRatio = links.total > 0 ? links.brokenCount / links.total : 0;
+    let score = Math.round((1 - brokenRatio) * 10);
+
+    if (links.brokenCount > 0) {
+      issues.push({
+        severity: brokenRatio > 0.2 ? 'warning' : 'info',
+        message: `${links.brokenCount} broken internal anchors detected`,
+        details: `Broken link ratio: ${(brokenRatio * 100).toFixed(0)}%`,
+        fix: 'Update or remove broken anchors and ensure targets exist'
+      });
+
+      links.brokenLinks.slice(0, 5).forEach(link => {
+        issues.push({
+          severity: 'info',
+          message: 'Broken anchor link',
+          location: link.href,
+          details: link.reason || 'Missing anchor target',
+          fix: 'Add the anchor target or update the link'
+        });
+      });
+    }
+
+    return {
+      criterionId: 'CS-07',
+      score: Math.max(0, Math.min(10, score)),
+      issues,
+      details: `${links.brokenCount} broken anchors out of ${links.total} total links.`
+    };
+  },
+
+  /**
    * Run all content structure rules
    * @param {Object} metrics - Computed metrics
    * @returns {Object} Combined results
@@ -195,13 +244,15 @@ const ContentStructureRules = {
     results.criteria['CS-01'] = this.scoreParagraphBrevity(metrics);
     results.criteria['CS-02'] = this.scoreListUsage(metrics);
     results.criteria['CS-04'] = this.scoreHeadingHierarchy(metrics);
+    results.criteria['CS-07'] = this.scoreLinkIntegrity(metrics);
 
     // Calculate category score (weighted average)
     const configWeights = window.ScoringConfig?.categories?.['content-structure']?.criteria || {};
     const weights = {
       'CS-01': configWeights['CS-01']?.weight || 0.35,
       'CS-02': configWeights['CS-02']?.weight || 0.30,
-      'CS-04': configWeights['CS-04']?.weight || 0.35
+      'CS-04': configWeights['CS-04']?.weight || 0.35,
+      'CS-07': configWeights['CS-07']?.weight || 0.10
     };
     let totalWeight = 0;
     let weightedSum = 0;
