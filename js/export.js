@@ -194,6 +194,41 @@ const Export = {
   },
 
   /**
+   * Generate a batch Markdown report
+   * @param {Array} resultsList - Array of results or errors
+   * @returns {string} Markdown report
+   */
+  generateBatchMarkdown(resultsList, duplicates = []) {
+    const lines = [];
+    lines.push('# AI-Friendliness Batch Report');
+    lines.push('');
+    lines.push(`**Generated:** ${new Date().toLocaleString()}`);
+    lines.push('');
+    lines.push('| URL | Score | Status |');
+    lines.push('|-----|-------|--------|');
+
+    resultsList.forEach(entry => {
+      if (entry.error) {
+        lines.push(`| ${entry.url} | - | Error: ${entry.error} |`);
+      } else {
+        lines.push(`| ${entry.meta.url} | ${entry.compositeScore.toFixed(1)}/10 | ${this.getStatusLabel(entry.status)} |`);
+      }
+    });
+
+    if (duplicates.length > 0) {
+      lines.push('');
+      lines.push('## Potential Duplicates');
+      lines.push('');
+      duplicates.forEach(pair => {
+        lines.push(`- ${pair.a} ↔ ${pair.b} (${pair.similarity}%)`);
+      });
+    }
+
+    lines.push('');
+    return lines.join('\n');
+  },
+
+  /**
    * Download a file
    * @param {string} content - File content
    * @param {string} filename - File name
@@ -222,6 +257,16 @@ const Export = {
   },
 
   /**
+   * Download batch Markdown report
+   * @param {Array} resultsList - Array of results
+   */
+  downloadBatchMarkdown(resultsList, duplicates = []) {
+    const content = this.generateBatchMarkdown(resultsList, duplicates);
+    const filename = `batch_score_report_${new Date().toISOString().slice(0, 10)}.md`;
+    this.downloadFile(content, filename, 'text/markdown');
+  },
+
+  /**
    * Download JSON export
    * @param {Object} results - Scoring results
    */
@@ -232,12 +277,37 @@ const Export = {
   },
 
   /**
+   * Download batch JSON export
+   * @param {Array} resultsList - Array of results
+   */
+  downloadBatchJson(resultsList) {
+    const content = JSON.stringify(resultsList, null, 2);
+    const filename = `batch_score_data_${new Date().toISOString().slice(0, 10)}.json`;
+    this.downloadFile(content, filename, 'application/json');
+  },
+
+  /**
    * Copy report to clipboard
    * @param {Object} results - Scoring results
    * @returns {Promise<boolean>} Success status
    */
   async copyToClipboard(results) {
     const content = this.generateMarkdownReport(results);
+    try {
+      await navigator.clipboard.writeText(content);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Copy batch report to clipboard
+   * @param {Array} resultsList - Array of results
+   * @returns {Promise<boolean>} Success status
+   */
+  async copyBatchToClipboard(resultsList, duplicates = []) {
+    const content = this.generateBatchMarkdown(resultsList, duplicates);
     try {
       await navigator.clipboard.writeText(content);
       return true;

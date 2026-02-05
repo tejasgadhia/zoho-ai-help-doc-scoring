@@ -118,6 +118,13 @@
               Copy Code
             </button>
           </div>
+
+          <div class="batch-box">
+            <h3>Batch score URLs</h3>
+            <p class="batch-help">Paste one help.zoho.com URL per line. Batch scoring requires CORS access; if blocked, use the bookmarklet per page.</p>
+            <textarea id="batchUrls" class="batch-textarea" placeholder="https://help.zoho.com/...\nhttps://help.zoho.com/..."></textarea>
+            <button id="batchScoreBtn" class="btn btn-secondary">Score Batch</button>
+          </div>
         </div>
 
         <!-- Right Column: How It Works -->
@@ -282,6 +289,8 @@
               <p id="summaryText" class="summary-text">Summary text here</p>
             </div>
           </section>
+
+          <div id="batchSummary" class="batch-summary hidden"></div>
 
           <!-- Category Breakdown -->
           <section class="categories-section">

@@ -84,6 +84,12 @@ const App = {
       manualScoreBtn.addEventListener('click', () => this.showManualInput());
     }
 
+    // Batch scoring
+    const batchScoreBtn = document.getElementById('batchScoreBtn');
+    if (batchScoreBtn) {
+      batchScoreBtn.addEventListener('click', () => this.handleBatchScore());
+    }
+
     // Export buttons
     document.querySelectorAll('[data-export]').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -223,6 +229,17 @@ const App = {
     try {
       const apiKey = Storage.getApiKey();
       const metrics = this.state.content.metrics;
+      const cacheKey = `${this.hashText(this.state.content.text.fullText)}:${apiKey ? 'full' : 'rule'}`;
+      const cached = Storage.getResultCacheEntry(cacheKey);
+      if (cached && cached.results) {
+        this.state.results = cached.results;
+        this.state.view = 'results';
+        this.state.isScoring = false;
+        this.updateUI();
+        this.renderResults();
+        this.showToast('Reused cached results for unchanged content', 'info');
+        return;
+      }
 
       const results = await Scorer.scoreAll(
         this.state.content,
@@ -231,6 +248,7 @@ const App = {
         (progress) => this.updateProgress(progress)
       );
 
+      Storage.saveResultCacheEntry(cacheKey, results);
       this.state.results = results;
 
       // Save to history
@@ -313,6 +331,9 @@ const App = {
       summaryEl.textContent = results.summary;
     }
 
+    // Render batch summary if present
+    this.renderBatchSummary();
+
     // Render charts
     Charts.createScoreGauge('scoreGauge', results.compositeScore);
     Charts.createCategoryChart('categoryChart', results.categories);
@@ -328,6 +349,317 @@ const App = {
 
     // Update history sidebar
     this.renderHistory();
+  },
+
+  /**
+   * Render batch summary list
+   */
+  renderBatchSummary() {
+    const container = document.getElementById('batchSummary');
+    if (!container) return;
+    const batchResults = this.state.batchResults || [];
+
+    if (batchResults.length <= 1) {
+      container.classList.add('hidden');
+      container.innerHTML = '';
+      return;
+    }
+
+    const listItems = batchResults.map((entry, index) => {
+      if (entry.error) {
+        return `<li class="batch-error">${entry.url} - ${entry.error}</li>`;
+      }
+      return `<li><button class="link-button" data-batch-index="${index}">${entry.meta.title || entry.meta.url}</button> — ${entry.compositeScore.toFixed(1)}/10</li>`;
+    });
+    const duplicates = this.state.batchDuplicates || [];
+    const duplicateMarkup = duplicates.length
+      ? `<p><strong>Potential duplicates:</strong></p><ul>${duplicates.map(pair => `<li>${pair.a} ↔ ${pair.b} (${pair.similarity}%)</li>`).join('')}</ul>`
+      : '';
+
+    container.classList.remove('hidden');
+    container.innerHTML = `
+      <strong>Batch Results (${batchResults.length})</strong>
+      <ul>${listItems.join('')}</ul>
+      ${duplicateMarkup}
+    `;
+
+    container.querySelectorAll('[data-batch-index]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.batchIndex, 10);
+        const entry = batchResults[idx];
+        if (entry && !entry.error) {
+          this.state.results = entry;
+          this.renderResults();
+        }
+      });
+    });
+  },
+
+  /**
+   * Handle batch scoring submission
+   */
+  async handleBatchScore() {
+    const input = document.getElementById('batchUrls');
+    if (!input) return;
+
+    const urls = input.value.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (urls.length === 0) {
+      this.showToast('Add at least one URL to batch score', 'error');
+      return;
+    }
+
+    await this.runBatchScoring(urls);
+  },
+
+  /**
+   * Run batch scoring for a list of URLs
+   * @param {string[]} urls - URLs to score
+   */
+  async runBatchScoring(urls) {
+    this.state.view = 'scoring';
+    this.state.isScoring = true;
+    this.state.results = null;
+    this.state.batchResults = [];
+    this.updateUI();
+
+    const apiKey = Storage.getApiKey();
+    const batchResults = [];
+    const tokenSets = [];
+
+    for (let i = 0; i < urls.length; i += 1) {
+      const url = urls[i];
+      this.updateProgress({
+        step: 'batch',
+        message: `Scoring ${i + 1} of ${urls.length}...`,
+        percent: Math.round(((i + 1) / urls.length) * 90)
+      });
+
+      try {
+        const response = await fetch(url, { mode: 'cors' });
+        if (!response.ok) {
+          throw new Error(`Fetch failed (${response.status})`);
+        }
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const rawContent = this.extractContentFromDocument(doc, url);
+        const content = Parser.normalize(rawContent);
+        const metrics = content.metrics;
+
+        const result = await Scorer.scoreAll(
+          content,
+          metrics,
+          apiKey,
+          progress => this.updateProgress(progress)
+        );
+
+        result.meta.extractionWarnings = content.meta.extractionWarnings || [];
+        const tokens = content.text.fullText.toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter(token => token.length > 3);
+        tokenSets.push(new Set(tokens));
+        batchResults.push(result);
+
+        Storage.saveToHistory({
+          url: result.meta.url,
+          title: result.meta.title,
+          compositeScore: result.compositeScore,
+          categoryScores: Object.fromEntries(
+            Object.entries(result.categories).map(([k, v]) => [k, v.score])
+          )
+        });
+      } catch (error) {
+        batchResults.push({ url, error: error.message });
+      }
+    }
+
+    const firstResult = batchResults.find(entry => !entry.error);
+    if (firstResult) {
+      this.state.results = firstResult;
+    }
+    this.state.batchResults = batchResults;
+    this.state.batchDuplicates = this.findDuplicatePages(batchResults, tokenSets);
+    this.state.view = 'results';
+    this.state.isScoring = false;
+    this.updateUI();
+    if (this.state.results) {
+      this.renderResults();
+    } else {
+      this.showError('Batch scoring failed for all URLs.');
+    }
+  },
+
+  /**
+   * Find duplicate or near-duplicate pages in batch results
+   * @param {Array} resultsList - Results list
+   * @param {Array<Set<string>>} tokenSets - Token sets for each result
+   * @returns {Array} Duplicate pairs
+   */
+  findDuplicatePages(resultsList, tokenSets) {
+    const duplicates = [];
+    const similarity = (a, b) => {
+      if (!a || !b) return 0;
+      let intersection = 0;
+      a.forEach(token => {
+        if (b.has(token)) intersection += 1;
+      });
+      const union = a.size + b.size - intersection;
+      return union === 0 ? 0 : intersection / union;
+    };
+
+    for (let i = 0; i < resultsList.length; i += 1) {
+      if (resultsList[i].error) continue;
+      for (let j = i + 1; j < resultsList.length; j += 1) {
+        if (resultsList[j].error) continue;
+        const score = similarity(tokenSets[i], tokenSets[j]);
+        if (score >= 0.85) {
+          duplicates.push({
+            a: resultsList[i].meta.url,
+            b: resultsList[j].meta.url,
+            similarity: Math.round(score * 100)
+          });
+        }
+      }
+    }
+
+    return duplicates;
+  },
+
+  /**
+   * Extract content from a parsed HTML document
+   * @param {Document} doc - Parsed document
+   * @param {string} url - Source URL
+   * @returns {Object} Raw content payload
+   */
+  extractContentFromDocument(doc, url) {
+    const content = {
+      meta: {
+        url,
+        title: doc.title || url,
+        extractedAt: new Date().toISOString(),
+        domain: new URL(url).hostname,
+        extractionWarnings: []
+      },
+      structure: {
+        headings: [],
+        paragraphs: [],
+        lists: [],
+        images: [],
+        tables: [],
+        codeBlocks: [],
+        links: []
+      },
+      text: {
+        fullText: '',
+        wordCount: 0
+      }
+    };
+
+    const contentSelectors = [
+      '.kb-article-content',
+      '.article-content',
+      '.help-content',
+      'article',
+      'main',
+      '.main-content',
+      '#main-content'
+    ];
+    let mainContent = null;
+    for (const selector of contentSelectors) {
+      mainContent = doc.querySelector(selector);
+      if (mainContent) break;
+    }
+    if (!mainContent) {
+      mainContent = doc.body;
+      content.meta.extractionWarnings.push('No content container matched; fell back to document.body');
+    }
+
+    mainContent.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h, index) => {
+      content.structure.headings.push({
+        level: h.tagName.toLowerCase(),
+        text: h.textContent.trim(),
+        index
+      });
+    });
+
+    mainContent.querySelectorAll('p').forEach((p, index) => {
+      const text = p.textContent.trim();
+      if (text.length > 0) {
+        content.structure.paragraphs.push({
+          text,
+          wordCount: text.split(/\s+/).filter(w => w.length > 0).length,
+          index
+        });
+      }
+    });
+
+    mainContent.querySelectorAll('ul, ol').forEach((list, index) => {
+      const items = Array.from(list.querySelectorAll(':scope > li')).map(li => li.textContent.trim());
+      if (items.length > 0) {
+        content.structure.lists.push({
+          type: list.tagName.toLowerCase(),
+          items,
+          itemCount: items.length,
+          index
+        });
+      }
+    });
+
+    mainContent.querySelectorAll('img').forEach((img, index) => {
+      content.structure.images.push({
+        src: img.src,
+        alt: img.alt || null,
+        hasAlt: !!img.alt && img.alt.trim().length > 0,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        index
+      });
+    });
+
+    mainContent.querySelectorAll('table').forEach((table, index) => {
+      const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+      const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+        Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+      ).filter(row => row.length > 0);
+      content.structure.tables.push({
+        headers,
+        rows,
+        rowCount: rows.length,
+        columnCount: headers.length || (rows[0] ? rows[0].length : 0),
+        index
+      });
+    });
+
+    const processedCode = new Set();
+    mainContent.querySelectorAll('pre, code').forEach((code, index) => {
+      const text = code.textContent.trim();
+      if (text.length > 0 && !processedCode.has(text)) {
+        processedCode.add(text);
+        content.structure.codeBlocks.push({
+          content: text,
+          language: code.className.replace('language-', '') || 'unknown',
+          index
+        });
+      }
+    });
+
+    mainContent.querySelectorAll('a[href]').forEach((link, index) => {
+      const href = link.href;
+      const isInternal = href.includes(content.meta.domain) || href.startsWith('/') || href.startsWith('#');
+      content.structure.links.push({
+        href,
+        text: link.textContent.trim(),
+        type: isInternal ? 'internal' : 'external',
+        index
+      });
+    });
+
+    content.text.fullText = mainContent.textContent.replace(/\s+/g, ' ').trim();
+    content.text.wordCount = content.text.fullText.split(/\s+/).filter(w => w.length > 0).length;
+
+    return content;
   },
 
   /**
@@ -598,6 +930,24 @@ const App = {
    */
   async exportResults(format) {
     if (!this.state.results) return;
+    const batchResults = this.state.batchResults || [];
+    const duplicates = this.state.batchDuplicates || [];
+    if (batchResults.length > 1) {
+      switch (format) {
+        case 'markdown':
+          Export.downloadBatchMarkdown(batchResults, duplicates);
+          this.showToast('Batch report downloaded');
+          return;
+        case 'json':
+          Export.downloadBatchJson(batchResults);
+          this.showToast('Batch JSON downloaded');
+          return;
+        case 'clipboard':
+          const copied = await Export.copyBatchToClipboard(batchResults, duplicates);
+          this.showToast(copied ? 'Batch report copied' : 'Failed to copy', copied ? 'success' : 'error');
+          return;
+      }
+    }
 
     switch (format) {
       case 'markdown':
@@ -663,6 +1013,20 @@ const App = {
       errorEl.classList.remove('hidden');
     }
     this.showToast(message, 'error');
+  },
+
+  /**
+   * Hash a string for caching
+   * @param {string} text - Text to hash
+   * @returns {string} Hash
+   */
+  hashText(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return (hash >>> 0).toString(16);
   },
 
   /**
