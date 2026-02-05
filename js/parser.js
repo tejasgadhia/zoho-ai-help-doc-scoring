@@ -79,6 +79,20 @@ const Parser = {
 
     // List metrics
     const totalListItems = structure.lists.reduce((sum, list) => sum + list.itemCount, 0);
+    const proceduralVerbPattern = /^(click|select|choose|open|go to|enter|type|add|remove|delete|enable|disable|run|install|configure|create|update|save|set|navigate|verify|copy|paste|upload|download|edit|apply|start|stop|restart|connect|sign in|log in|sign out|logout)\b/i;
+    const isProceduralItem = text =>
+      proceduralVerbPattern.test(text.trim()) || /^step\s+\d+/i.test(text.trim());
+    const listAnalysis = structure.lists.map(list => {
+      const proceduralItems = list.items.filter(item => isProceduralItem(item)).length;
+      const procedural = list.type === 'ol' || proceduralItems >= Math.max(1, Math.ceil(list.items.length * 0.3));
+      return {
+        type: list.type,
+        procedural
+      };
+    });
+    const orderedCount = listAnalysis.filter(list => list.type === 'ol').length;
+    const proceduralCount = listAnalysis.filter(list => list.procedural).length;
+    const descriptiveCount = listAnalysis.length - proceduralCount;
     const listToParagraphRatio = structure.paragraphs.length > 0
       ? structure.lists.length / structure.paragraphs.length
       : 0;
@@ -134,7 +148,10 @@ const Parser = {
       lists: {
         count: structure.lists.length,
         totalItems: totalListItems,
-        listToParagraphRatio: Math.round(listToParagraphRatio * 100) / 100
+        listToParagraphRatio: Math.round(listToParagraphRatio * 100) / 100,
+        orderedCount,
+        proceduralCount,
+        descriptiveCount
       },
       images: {
         count: structure.images.length,

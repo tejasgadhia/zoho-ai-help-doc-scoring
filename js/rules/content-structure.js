@@ -100,11 +100,30 @@ const ContentStructureRules = {
       });
     }
 
+    if (lists.proceduralCount > 0 && lists.orderedCount === 0) {
+      score -= 1;
+      issues.push({
+        severity: 'warning',
+        message: 'Procedural lists are not ordered',
+        fix: 'Use numbered lists for step-by-step instructions'
+      });
+    }
+
+    if (lists.descriptiveCount > 0 && lists.proceduralCount === 0 && lists.count > 0) {
+      issues.push({
+        severity: 'info',
+        message: 'Lists appear descriptive rather than procedural',
+        fix: 'Ensure procedural steps are captured in ordered lists'
+      });
+    }
+
+    score = Math.max(0, score);
+
     return {
       criterionId: 'CS-02',
       score,
       issues,
-      details: `List-to-paragraph ratio: ${actualRatio} (ideal: ${idealRatio}). ${lists.count} lists with ${lists.totalItems} total items.`
+      details: `List-to-paragraph ratio: ${actualRatio} (ideal: ${idealRatio}). ${lists.count} lists with ${lists.totalItems} total items. Procedural lists: ${lists.proceduralCount}, descriptive lists: ${lists.descriptiveCount}.`
     };
   },
 
