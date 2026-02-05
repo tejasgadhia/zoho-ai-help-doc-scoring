@@ -13,6 +13,7 @@ const ContentStructureRules = {
   scoreParagraphBrevity(metrics) {
     const { paragraphs } = metrics;
     const issues = [];
+    const threshold = window.ScoringConfig?.categories?.['content-structure']?.criteria?.['CS-01']?.threshold || 150;
 
     // No paragraphs = perfect score (likely all lists/tables)
     if (paragraphs.count === 0) {
@@ -38,7 +39,7 @@ const ContentStructureRules = {
     paragraphs.longParagraphs.forEach(p => {
       issues.push({
         severity: p.wordCount > 200 ? 'critical' : 'warning',
-        message: `Paragraph ${p.index + 1} has ${p.wordCount} words (threshold: 150)`,
+        message: `Paragraph ${p.index + 1} has ${p.wordCount} words (threshold: ${threshold})`,
         location: `Paragraph ${p.index + 1}`,
         excerpt: p.text,
         fix: 'Consider breaking this paragraph into bullet points or shorter sections'
@@ -49,7 +50,7 @@ const ContentStructureRules = {
       criterionId: 'CS-01',
       score,
       issues,
-      details: `${paragraphs.longCount} of ${paragraphs.count} paragraphs exceed 150 words. Average length: ${paragraphs.avgLength} words.`
+      details: `${paragraphs.longCount} of ${paragraphs.count} paragraphs exceed ${threshold} words. Average length: ${paragraphs.avgLength} words.`
     };
   },
 
@@ -64,7 +65,7 @@ const ContentStructureRules = {
     const issues = [];
 
     // Ideal ratio is ~0.3 (30% lists relative to paragraphs)
-    const idealRatio = 0.3;
+    const idealRatio = window.ScoringConfig?.categories?.['content-structure']?.criteria?.['CS-02']?.idealRatio || 0.3;
     const actualRatio = lists.listToParagraphRatio;
 
     // No content = neutral score
@@ -196,7 +197,12 @@ const ContentStructureRules = {
     results.criteria['CS-04'] = this.scoreHeadingHierarchy(metrics);
 
     // Calculate category score (weighted average)
-    const weights = { 'CS-01': 0.35, 'CS-02': 0.30, 'CS-04': 0.35 };
+    const configWeights = window.ScoringConfig?.categories?.['content-structure']?.criteria || {};
+    const weights = {
+      'CS-01': configWeights['CS-01']?.weight || 0.35,
+      'CS-02': configWeights['CS-02']?.weight || 0.30,
+      'CS-04': configWeights['CS-04']?.weight || 0.35
+    };
     let totalWeight = 0;
     let weightedSum = 0;
 

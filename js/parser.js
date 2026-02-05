@@ -63,7 +63,8 @@ const Parser = {
 
     // Paragraph metrics
     const paragraphLengths = structure.paragraphs.map(p => p.wordCount);
-    const longParagraphs = structure.paragraphs.filter(p => p.wordCount > 150);
+    const paragraphThreshold = window.ScoringConfig?.categories?.['content-structure']?.criteria?.['CS-01']?.threshold || 150;
+    const longParagraphs = structure.paragraphs.filter(p => p.wordCount > paragraphThreshold);
     const avgParagraphLength = paragraphLengths.length > 0
       ? paragraphLengths.reduce((a, b) => a + b, 0) / paragraphLengths.length
       : 0;

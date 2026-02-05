@@ -20,6 +20,9 @@ const App = {
     // Set up theme
     this.initTheme();
 
+    // Load scoring config
+    await this.loadScoringConfig();
+
     // Set up event listeners
     this.setupEventListeners();
 
@@ -167,6 +170,8 @@ const App = {
    */
   async processContent(rawContent) {
     try {
+      await this.loadScoringConfig(true);
+
       // Validate and normalize content
       const content = Parser.normalize(rawContent);
       this.state.content = content;
@@ -181,6 +186,24 @@ const App = {
     } catch (error) {
       console.error('Failed to process content:', error);
       this.showError('Failed to process page content: ' + error.message);
+    }
+  },
+
+  /**
+   * Load scoring config and apply overrides
+   * @param {boolean} forceReload - Bypass cache if true
+   */
+  async loadScoringConfig(forceReload = false) {
+    try {
+      const cacheBust = forceReload ? `?t=${Date.now()}` : '';
+      const response = await fetch(`config/scoring-criteria.json${cacheBust}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      const config = await response.json();
+      this.state.scoringConfig = config;
+      window.ScoringConfig = config;
+      Scorer.applyConfig(config);
+    } catch (error) {
+      console.warn('Failed to load scoring config:', error);
     }
   },
 
