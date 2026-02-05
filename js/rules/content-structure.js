@@ -128,6 +128,7 @@ const ContentStructureRules = {
       issues.push({
         severity: 'warning',
         message: 'Low list usage in procedural content',
+        details: `List-to-paragraph ratio ${actualRatio} is below 0.1 (ideal: ${idealRatio})`,
         fix: 'Consider converting step-by-step instructions into numbered lists'
       });
     }
@@ -172,6 +173,7 @@ const ContentStructureRules = {
       issues.push({
         severity: 'warning',
         message: 'Page lacks an H1 heading',
+        details: 'Expected a single H1 to establish page context',
         fix: 'Add a clear H1 heading that describes the page purpose'
       });
     }
@@ -186,6 +188,7 @@ const ContentStructureRules = {
           severity: 'warning',
           message: issue.message,
           location: `Heading ${issue.index + 1}`,
+          details: 'Detected a skipped heading level in the hierarchy',
           fix: 'Maintain proper heading hierarchy without skipping levels'
         });
       });
@@ -198,6 +201,7 @@ const ContentStructureRules = {
       issues.push({
         severity: 'info',
         message: 'Content could benefit from more section headings',
+        details: `Headings per block ${headingsPerContentBlock.toFixed(2)} is below 0.05`,
         fix: 'Add subheadings to break up long sections'
       });
     }
