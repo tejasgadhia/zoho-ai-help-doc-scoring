@@ -28,7 +28,8 @@
         url: window.location.href,
         title: document.title,
         extractedAt: new Date().toISOString(),
-        domain: currentDomain
+        domain: currentDomain,
+        extractionWarnings: []
       },
       structure: {
         headings: [],
@@ -48,23 +49,58 @@
     // Find the main content container (Zoho help portal specific selectors)
     const contentSelectors = [
       '.kb-article-content',
+      '.kb-article',
+      '.kb-content',
       '.article-content',
+      '.article-body',
+      '.articleBody',
       '.help-content',
+      '.content-area',
+      '.content',
+      '.doc-content',
+      '.document-content',
+      '.help-article',
       'article',
+      '[role="main"]',
       'main',
       '.main-content',
       '#main-content'
     ];
 
     let mainContent = null;
-    for (const selector of contentSelectors) {
-      mainContent = document.querySelector(selector);
-      if (mainContent) break;
+    let matchedSelector = null;
+    const candidates = [];
+
+    const getTextLength = element => {
+      if (!element) return 0;
+      return element.textContent.replace(/\s+/g, ' ').trim().length;
+    };
+
+    contentSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(node => {
+        candidates.push({
+          node,
+          selector,
+          textLength: getTextLength(node)
+        });
+      });
+    });
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.textLength - a.textLength);
+      mainContent = candidates[0].node;
+      matchedSelector = candidates[0].selector;
+    } else {
+      mainContent = document.body;
+      content.meta.extractionWarnings.push('No content container matched; fell back to document.body');
     }
 
-    // Fallback to body if no specific container found
-    if (!mainContent) {
-      mainContent = document.body;
+    if (matchedSelector && matchedSelector !== 'article' && matchedSelector !== 'main') {
+      content.meta.extractionWarnings.push(`Using content selector: ${matchedSelector}`);
+    }
+
+    if (mainContent && getTextLength(mainContent) < 200) {
+      content.meta.extractionWarnings.push('Selected content container has low text volume; extraction may be incomplete');
     }
 
     // Extract headings
