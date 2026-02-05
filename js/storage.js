@@ -9,12 +9,14 @@ const Storage = {
     THEME: 'aiDocScorer_theme',
     HISTORY: 'aiDocScorer_history',
     SETTINGS: 'aiDocScorer_settings',
-    CLAUDE_CACHE: 'aiDocScorer_claudeCache'
+    CLAUDE_CACHE: 'aiDocScorer_claudeCache',
+    RESULT_CACHE: 'aiDocScorer_resultCache'
   },
 
   MAX_HISTORY_ITEMS: 50,
   MAX_CACHE_ITEMS: 50,
   CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000,
+  MAX_RESULT_CACHE_ITEMS: 20,
 
   /**
    * Save API key (encrypted with basic obfuscation)
@@ -182,6 +184,46 @@ const Storage = {
       .slice(0, this.MAX_CACHE_ITEMS);
     const pruned = Object.fromEntries(entries);
     localStorage.setItem(this.KEYS.CLAUDE_CACHE, JSON.stringify(pruned));
+  },
+
+  /**
+   * Get cached results map
+   * @returns {Object} Cache map
+   */
+  getResultCache() {
+    try {
+      const data = localStorage.getItem(this.KEYS.RESULT_CACHE);
+      return data ? JSON.parse(data) : {};
+    } catch {
+      return {};
+    }
+  },
+
+  /**
+   * Get cached results by key
+   * @param {string} key - Cache key
+   * @returns {Object|null} Cached entry
+   */
+  getResultCacheEntry(key) {
+    const cache = this.getResultCache();
+    return cache[key] || null;
+  },
+
+  /**
+   * Save results to cache
+   * @param {string} key - Cache key
+   * @param {Object} results - Scoring results
+   */
+  saveResultCacheEntry(key, results) {
+    const cache = this.getResultCache();
+    cache[key] = {
+      savedAt: new Date().toISOString(),
+      results
+    };
+    const entries = Object.entries(cache)
+      .sort((a, b) => new Date(b[1].savedAt) - new Date(a[1].savedAt))
+      .slice(0, this.MAX_RESULT_CACHE_ITEMS);
+    localStorage.setItem(this.KEYS.RESULT_CACHE, JSON.stringify(Object.fromEntries(entries)));
   },
 
   /**

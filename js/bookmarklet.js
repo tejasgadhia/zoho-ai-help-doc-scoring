@@ -268,12 +268,33 @@
     links.forEach((link, index) => {
       if (isInBoilerplate(link)) return;
       const href = link.href;
+      let isBroken = false;
+      let reason = null;
+      if (href.startsWith('#')) {
+        const targetId = href.slice(1);
+        const target = document.getElementById(targetId) || document.querySelector(`[name="${targetId}"]`);
+        if (!target) {
+          isBroken = true;
+          reason = 'Missing anchor target';
+        }
+      } else if (href.includes('#')) {
+        const [baseUrl, hash] = href.split('#');
+        if (baseUrl === window.location.href.split('#')[0] && hash) {
+          const target = document.getElementById(hash) || document.querySelector(`[name="${hash}"]`);
+          if (!target) {
+            isBroken = true;
+            reason = 'Missing anchor target';
+          }
+        }
+      }
       const isInternal = href.includes(currentDomain) || href.startsWith('/') || href.startsWith('#');
       content.structure.links.push({
         href: href,
         text: link.textContent.trim(),
         type: isInternal ? 'internal' : 'external',
-        index: index
+        index: index,
+        isBroken,
+        reason
       });
     });
 

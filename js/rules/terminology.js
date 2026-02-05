@@ -233,7 +233,11 @@ const TerminologyRules = {
     results.criteria['AV-02'] = this.detectConfusableTerms(content);
 
     // Calculate category score
-    const weights = { 'AV-01': 0.6, 'AV-02': 0.4 };
+    const configWeights = window.ScoringConfig?.categories?.['terminology']?.criteria || {};
+    const weights = {
+      'AV-01': configWeights['AV-01']?.weight || 0.6,
+      'AV-02': configWeights['AV-02']?.weight || 0.4
+    };
     let weightedSum = 0;
     let totalWeight = 0;
 

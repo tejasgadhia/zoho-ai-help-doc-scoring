@@ -13,6 +13,7 @@ const ContentStructureRules = {
   scoreParagraphBrevity(metrics) {
     const { paragraphs } = metrics;
     const issues = [];
+    const threshold = window.ScoringConfig?.categories?.['content-structure']?.criteria?.['CS-01']?.threshold || 150;
 
     // No paragraphs = perfect score (likely all lists/tables)
     if (paragraphs.count === 0) {
@@ -38,7 +39,7 @@ const ContentStructureRules = {
     paragraphs.longParagraphs.forEach(p => {
       issues.push({
         severity: p.wordCount > 200 ? 'critical' : 'warning',
-        message: `Paragraph ${p.index + 1} has ${p.wordCount} words (threshold: 150)`,
+        message: `Paragraph ${p.index + 1} has ${p.wordCount} words (threshold: ${threshold})`,
         location: `Paragraph ${p.index + 1}`,
         excerpt: p.text,
         fix: 'Consider breaking this paragraph into bullet points or shorter sections'
@@ -81,7 +82,7 @@ const ContentStructureRules = {
       criterionId: 'CS-01',
       score,
       issues,
-      details: `${paragraphs.longCount} of ${paragraphs.count} paragraphs exceed 150 words. Average length: ${paragraphs.avgLength} words. Avg sentence length: ${paragraphs.sentences ? paragraphs.sentences.avgLength : 0} words.`
+      details: `${paragraphs.longCount} of ${paragraphs.count} paragraphs exceed ${threshold} words. Average length: ${paragraphs.avgLength} words. Avg sentence length: ${paragraphs.sentences ? paragraphs.sentences.avgLength : 0} words.`
     };
   },
 
@@ -96,7 +97,7 @@ const ContentStructureRules = {
     const issues = [];
 
     // Ideal ratio is ~0.3 (30% lists relative to paragraphs)
-    const idealRatio = 0.3;
+    const idealRatio = window.ScoringConfig?.categories?.['content-structure']?.criteria?.['CS-02']?.idealRatio || 0.3;
     const actualRatio = lists.listToParagraphRatio;
 
     // No content = neutral score
@@ -264,6 +265,55 @@ const ContentStructureRules = {
   },
 
   /**
+   * Score link integrity (CS-07)
+   * Flag broken internal anchors
+   * @param {Object} metrics - Computed metrics
+   * @returns {Object} Score and issues
+   */
+  scoreLinkIntegrity(metrics) {
+    const { links } = metrics;
+    const issues = [];
+
+    if (!links || links.total === 0) {
+      return {
+        criterionId: 'CS-07',
+        score: 10,
+        issues: [],
+        details: 'No links found'
+      };
+    }
+
+    const brokenRatio = links.total > 0 ? links.brokenCount / links.total : 0;
+    let score = Math.round((1 - brokenRatio) * 10);
+
+    if (links.brokenCount > 0) {
+      issues.push({
+        severity: brokenRatio > 0.2 ? 'warning' : 'info',
+        message: `${links.brokenCount} broken internal anchors detected`,
+        details: `Broken link ratio: ${(brokenRatio * 100).toFixed(0)}%`,
+        fix: 'Update or remove broken anchors and ensure targets exist'
+      });
+
+      links.brokenLinks.slice(0, 5).forEach(link => {
+        issues.push({
+          severity: 'info',
+          message: 'Broken anchor link',
+          location: link.href,
+          details: link.reason || 'Missing anchor target',
+          fix: 'Add the anchor target or update the link'
+        });
+      });
+    }
+
+    return {
+      criterionId: 'CS-07',
+      score: Math.max(0, Math.min(10, score)),
+      issues,
+      details: `${links.brokenCount} broken anchors out of ${links.total} total links.`
+    };
+  },
+
+  /**
    * Run all content structure rules
    * @param {Object} metrics - Computed metrics
    * @returns {Object} Combined results
@@ -279,9 +329,16 @@ const ContentStructureRules = {
     results.criteria['CS-01'] = this.scoreParagraphBrevity(metrics);
     results.criteria['CS-02'] = this.scoreListUsage(metrics);
     results.criteria['CS-04'] = this.scoreHeadingHierarchy(metrics);
+    results.criteria['CS-07'] = this.scoreLinkIntegrity(metrics);
 
     // Calculate category score (weighted average)
-    const weights = { 'CS-01': 0.35, 'CS-02': 0.30, 'CS-04': 0.35 };
+    const configWeights = window.ScoringConfig?.categories?.['content-structure']?.criteria || {};
+    const weights = {
+      'CS-01': configWeights['CS-01']?.weight || 0.35,
+      'CS-02': configWeights['CS-02']?.weight || 0.30,
+      'CS-04': configWeights['CS-04']?.weight || 0.35,
+      'CS-07': configWeights['CS-07']?.weight || 0.10
+    };
     let totalWeight = 0;
     let weightedSum = 0;
 

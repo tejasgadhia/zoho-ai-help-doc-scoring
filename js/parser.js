@@ -63,7 +63,8 @@ const Parser = {
 
     // Paragraph metrics
     const paragraphLengths = structure.paragraphs.map(p => p.wordCount);
-    const longParagraphs = structure.paragraphs.filter(p => p.wordCount > 150);
+    const paragraphThreshold = window.ScoringConfig?.categories?.['content-structure']?.criteria?.['CS-01']?.threshold || 150;
+    const longParagraphs = structure.paragraphs.filter(p => p.wordCount > paragraphThreshold);
     const avgParagraphLength = paragraphLengths.length > 0
       ? paragraphLengths.reduce((a, b) => a + b, 0) / paragraphLengths.length
       : 0;
@@ -164,6 +165,7 @@ const Parser = {
     // Link metrics
     const internalLinks = structure.links.filter(l => l.type === 'internal').length;
     const externalLinks = structure.links.filter(l => l.type === 'external').length;
+    const brokenLinks = structure.links.filter(l => l.isBroken);
 
     return {
       paragraphs: {
@@ -226,7 +228,13 @@ const Parser = {
       links: {
         total: structure.links.length,
         internal: internalLinks,
-        external: externalLinks
+        external: externalLinks,
+        brokenCount: brokenLinks.length,
+        brokenLinks: brokenLinks.map(link => ({
+          href: link.href,
+          reason: link.reason,
+          index: link.index
+        }))
       }
     };
   },

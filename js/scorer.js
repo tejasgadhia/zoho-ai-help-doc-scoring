@@ -21,6 +21,20 @@ const Scorer = {
   },
 
   /**
+   * Apply scoring config overrides (weights/thresholds)
+   * @param {Object} config - Scoring config JSON
+   */
+  applyConfig(config) {
+    if (!config || !config.categories) return;
+    Object.entries(config.categories).forEach(([key, category]) => {
+      if (typeof category.weight === 'number') {
+        this.CATEGORY_WEIGHTS[key] = category.weight;
+      }
+    });
+    this.config = config;
+  },
+
+  /**
    * Run all scoring modules and compute final results
    * @param {Object} content - Normalized content from parser
    * @param {Object} metrics - Computed metrics from parser

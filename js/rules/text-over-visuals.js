@@ -212,7 +212,12 @@ const TextOverVisualsRules = {
     results.criteria['TB-03'] = this.scoreAltTextCoverage(metrics);
 
     // Calculate category score
-    const weights = { 'TB-01': 0.35, 'TB-02': 0.35, 'TB-03': 0.30 };
+    const configWeights = window.ScoringConfig?.categories?.['text-over-visuals']?.criteria || {};
+    const weights = {
+      'TB-01': configWeights['TB-01']?.weight || 0.35,
+      'TB-02': configWeights['TB-02']?.weight || 0.35,
+      'TB-03': configWeights['TB-03']?.weight || 0.30
+    };
     let weightedSum = 0;
     let totalWeight = 0;
 
