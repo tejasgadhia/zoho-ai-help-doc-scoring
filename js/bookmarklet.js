@@ -104,9 +104,33 @@
       content.meta.extractionWarnings.push('Selected content container has low text volume; extraction may be incomplete');
     }
 
+    const boilerplateSelectors = [
+      'nav',
+      'aside',
+      'footer',
+      '.breadcrumb',
+      '.breadcrumbs',
+      '.toc',
+      '.table-of-contents',
+      '.sidebar',
+      '.related',
+      '.prev-next',
+      '.pagination',
+      '.header',
+      '.top-nav'
+    ];
+    const boilerplateSelector = boilerplateSelectors.join(', ');
+    const isInBoilerplate = element => element && element.closest(boilerplateSelector);
+    const stripBoilerplate = element => {
+      const clone = element.cloneNode(true);
+      clone.querySelectorAll(boilerplateSelector).forEach(el => el.remove());
+      return clone;
+    };
+
     // Extract headings
     const headings = mainContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
     headings.forEach((h, index) => {
+      if (isInBoilerplate(h)) return;
       content.structure.headings.push({
         level: h.tagName.toLowerCase(),
         text: h.textContent.trim(),
@@ -117,6 +141,7 @@
     // Extract paragraphs
     const paragraphs = mainContent.querySelectorAll('p');
     paragraphs.forEach((p, index) => {
+      if (isInBoilerplate(p)) return;
       const text = p.textContent.trim();
       if (text.length > 0) {
         content.structure.paragraphs.push({
@@ -130,6 +155,7 @@
     // Extract lists
     const lists = mainContent.querySelectorAll('ul, ol');
     lists.forEach((list, index) => {
+      if (isInBoilerplate(list)) return;
       const items = Array.from(list.querySelectorAll(':scope > li')).map(li => li.textContent.trim());
       if (items.length > 0) {
         content.structure.lists.push({
@@ -144,6 +170,7 @@
     // Extract images
     const images = mainContent.querySelectorAll('img');
     images.forEach((img, index) => {
+      if (isInBoilerplate(img)) return;
       content.structure.images.push({
         src: img.src,
         alt: img.alt || null,
@@ -157,6 +184,7 @@
     // Extract tables
     const tables = mainContent.querySelectorAll('table');
     tables.forEach((table, index) => {
+      if (isInBoilerplate(table)) return;
       const captionEl = table.querySelector('caption');
       const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
       const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
@@ -177,6 +205,7 @@
     const codeBlocks = mainContent.querySelectorAll('pre, code');
     const processedCode = new Set();
     codeBlocks.forEach((code, index) => {
+      if (isInBoilerplate(code)) return;
       const text = code.textContent.trim();
       const isInline = code.tagName.toLowerCase() === 'code' && !code.closest('pre');
       // Avoid duplicates (code inside pre)
@@ -236,6 +265,7 @@
     // Extract links
     const links = mainContent.querySelectorAll('a[href]');
     links.forEach((link, index) => {
+      if (isInBoilerplate(link)) return;
       const href = link.href;
       const isInternal = href.includes(currentDomain) || href.startsWith('/') || href.startsWith('#');
       content.structure.links.push({
@@ -247,7 +277,8 @@
     });
 
     // Get full text content
-    content.text.fullText = mainContent.textContent
+    const cleanContent = stripBoilerplate(mainContent);
+    content.text.fullText = cleanContent.textContent
       .replace(/\s+/g, ' ')
       .trim();
     content.text.wordCount = content.text.fullText
